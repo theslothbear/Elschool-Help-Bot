@@ -7,9 +7,9 @@ from telebot import types
 import traceback
 import datetime
 
-bot = AsyncTeleBot('token')
+bot = AsyncTeleBot('5921965603:AAFvpgXuuNy5CJGQ6ai9Fi3cyR_CKeK09i0')
 
-connect = sqlite3.connect('database.db', check_same_thread = False)
+connect = sqlite3.connect('help-els-beta.db', check_same_thread = False)
 cursor = connect.cursor()
 cursor.execute("""CREATE TABLE IF NOT EXISTS users_posting(
 	user_id INTEGER,
@@ -35,7 +35,7 @@ cursor.execute("""CREATE TABLE IF NOT EXISTS states(
 connect.commit()
 @bot.message_handler(commands = ['sendall'])
 async def sendall(message):
-	if message.from_user.id == ADMIN_ID and len(list(message.text.split('\n'))) > 1:
+	if message.from_user.id == 1898836155 and len(list(message.text.split('\n'))) > 1:
 		t = "\n".join(list(message.text.split('\n'))[1:])
 		cursor.execute("SELECT * FROM all_users")
 		records = cursor.fetchall()
@@ -46,7 +46,7 @@ async def sendall(message):
 			try:
 				await bot.send_message(row[0], t, reply_markup=gth, parse_mode='markdown')
 			except:
-				await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+				await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
 @bot.callback_query_handler(lambda call: call.data == 'delete')
 async def delete(call):
 	await bot.delete_message(call.from_user.id, call.message.message_id)
@@ -57,19 +57,19 @@ async def start(message):
 	menu11 = types.InlineKeyboardButton(text = '📊Статистика', callback_data = 'stat1')
 	menu2 = types.InlineKeyboardButton(text = '🛠Техподдержка', callback_data = 'help')
 	menu3 = types.InlineKeyboardButton(text = '👨‍💻Исходный код', url = 'https://github.com/theslothbear/Elschool-Help-Bot')
-	menu4 = types.InlineKeyboardButton(text = '⚙Настройки', callback_data = 'nastr')
+	#menu4 = types.InlineKeyboardButton(text = '⚙Настройки', callback_data = 'nastr')
 	menu.add(menu1)
 	menu.add(menu11)
-	menu.add(menu4)
+	#menu.add(menu4)
 	menu.add(menu2, menu3)
-	if message.from_user.id == ADMIN_ID:
-		await bot.send_message(ADMIN_ID, '🏠*Главное меню Elschool Help Bot (v.0.2.1)*\n\nЧтобы запустить парсинг оценок - /parsemarksstart\nОтправить сообщение всем юзерам - /sendall + |n + markdown', parse_mode = 'markdown', reply_markup = menu)
+	if message.from_user.id == 1898836155:
+		await bot.send_message(1898836155, '🏠*Главное меню Elschool Help Bot (v.1.0.1)*\n\nЧтобы запустить парсинг оценок - /parsemarksstart\nОтправить сообщение всем юзерам - /sendall + |n + markdown', parse_mode = 'markdown', reply_markup = menu)
 	else:
-		await bot.send_message(message.from_user.id, '🏠*Главное меню Elschool Help Bot (v.0.2.1)*', parse_mode = 'markdown', reply_markup = menu)
+		await bot.send_message(message.from_user.id, '🏠*Главное меню Elschool Help Bot (v.1.0.1)*', parse_mode = 'markdown', reply_markup = menu)
 
 @bot.message_handler(commands = ['parsemarksstart'])
 async def parse_marks(message):
-	if message.from_user.id == ADMIN_ID:
+	if message.from_user.id == 1898836155:
 		while True:
 			try:
 				cursor.execute("SELECT * FROM users_posting")
@@ -115,7 +115,7 @@ async def parse_marks(message):
 					session.headers.update({'User-Agent':user_agent_val})
 					_xsrf = session.cookies.get('_xsrf', domain=".elschool.ru")
 
-					spg, fl = [], True
+					spg, fl, col4 = [], True, -1
 					for i in range(1, 100):
 						str_marks = ''
 						s1 = list(r2.text.split(f'<tbody period="{i}"'))
@@ -128,11 +128,20 @@ async def parse_marks(message):
 								col3 = s1[1].split(r'<td class="grades-period-name">3')[1].split('<td class="grades-period-name">1')[0].count('<span>') - col4
 								col2 = s1[1].split(r'<td class="grades-period-name">2')[1].split('<td class="grades-period-name">1')[0].count('<span>') - col3 - col4
 								col1 = s1[1].split(r'<td class="grades-period-name">1')[1].split('<td class="grades-period-name">1')[0].count('<span>') - col2 - col3 - col4
+					        	#print(f'{pr}: 1 четверть - {col1}, 2 четверть - {col2}, 3 четверть - {col3}, 4 четверть - {col4}')
+							elif s1[1].split(r'<td class="grades-period-name">1')[1][1:4] == 'три':
+								col3 = s1[1].split(r'<td class="grades-period-name">3')[1].split('<td class="grades-period-name">1')[0].count('<span>')
+								col2 = s1[1].split(r'<td class="grades-period-name">2')[1].split('<td class="grades-period-name">1')[0].count('<span>') - col3
+								col1 = s1[1].split(r'<td class="grades-period-name">1')[1].split('<td class="grades-period-name">1')[0].count('<span>') - col2 - col3
 							for r in l1[1:]:
 								yu = r.split('</span>')[0]
 								spo.append(yu)
 								str_marks += f'{yu} '
-							spg.append({'Предмет': f'{pr}', 'Оценки': f'{" ".join(spo)}', 'Colvo': f'{col1} {col2} {col3} {col4}', 'str': str_marks[0:len(str_marks)-1]})
+							if col4 != -1:
+								spg.append({'Предмет': f'{pr}', 'Оценки': f'{" ".join(spo)}', 'Colvo': f'{col1} {col2} {col3} {col4}', 'str': str_marks[0:len(str_marks)-1]})
+							else:
+								spg.append({'Предмет': f'{pr}', 'Оценки': f'{" ".join(spo)}', 'Colvo': f'{col1} {col2} {col3}', 'str': str_marks[0:len(str_marks)-1]})
+
 						else:
 							break
 					if spg == []:
@@ -149,129 +158,340 @@ async def parse_marks(message):
 						records = cursor.fetchall()
 						cursor.execute(f"DELETE FROM t{rowrt[0]}")
 						connect.commit()
-						for s in spg:
-							m1m_1, m2m_1, m3m_1, m4m_1, m5m_1, n = 0, 0, 0, 0, 0, 1
-							m1m_2, m2m_2, m3m_2, m4m_2, m5m_2 = 0, 0, 0, 0, 0
-							m1m_3, m2m_3, m3m_3, m4m_3, m5m_3 = 0, 0, 0, 0, 0
-							m1m_4, m2m_4, m3m_4, m4m_4, m5m_4 = 0, 0, 0, 0, 0
-							c1, c2, c3, c4 = map(int, s['Colvo'].split())
-							for mark in list(s['Оценки'].split()):
-								if int(mark) == 5:
-									if n <= c1:
-										m5m_1 +=1
-									elif n <= c1 + c2:
-										m5m_2 += 1
-									elif n <= c1 + c2 + c3:
-										m5m_3 += 1
-									else:
-										m5m_4 += 1
-									n+=1
-								elif int(mark) == 4:
-									if n <= c1:
-										m4m_1 +=1
-									elif n <= c1 + c2:
-										m4m_2 += 1
-									elif n <= c1 + c2 + c3:
-										m4m_3 += 1
-									else:
-										m4m_4 += 1
-									n+=1
-								elif int(mark) == 3:
-									if n <= c1:
-										m3m_1 +=1
-									elif n <= c1 + c2:
-										m3m_2 += 1
-									elif n <= c1 + c2 + c3:
-										m3m_3 += 1
-									else:
-										m3m_4 += 1
-									n+=1
-								elif int(mark) == 2:
-									if n <= c1:
-										m2m_1 +=1
-									elif n <= c1 + c2:
-										m2m_2 += 1
-									elif n <= c1 + c2 + c3:
-										m2m_3 += 1
-									else:
-										m2m_4 += 1
-									n+=1
-								elif int(mark) == 1:
-									if n <= c1:
-										m1m_1 +=1
-									elif n <= c1 + c2:
-										m1m_2 += 1
-									elif n <= c1 + c2 + c3:
-										m1m_3 += 1
-									else:
-										m1m_4 += 1
-									n+=1
-							for row in records:
-								if row[0] == s['Предмет']:
-									m5f, m4f, m3f, m2f, m1f = sum(map(int,row[1].split())), sum(map(int,row[2].split())), sum(map(int,row[3].split())), sum(map(int,row[4].split())), sum(map(int,row[5].split())) #старые
-									ws = types.InlineKeyboardMarkup()
-									ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-									p = 'Предмет'
-									if len(s[p]) > 32:
-										prr = s[p][0:30] + '...'
-									else:
-										prr = s[p]
-									ws.add(types.InlineKeyboardButton(text = f'📊Статистика по предмету', callback_data = f'P{prr}'))
-									ws.add(ws1)
-									if m5m_1 + m5m_2 + m5m_3 +m5m_4 > m5f:
-										for i in range(m5m_1 + m5m_2 + m5m_3 +m5m_4 - m5f):
-											p, d = 'Предмет', str(datetime.datetime.now())
-											await bot.send_message(ADMIN_CHANNEL, f'{s[p]}')
-											try:	
-												await bot.send_message(rowrt[0], (fr'🟢<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 5 🟢'
-													f'\n\n'
-													fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-											except:
-												await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
-									if m4m_1 + m4m_2 + m4m_3 +m4m_4 > m4f:
-										for i in range(m4m_1 + m4m_2 + m4m_3 +m4m_4 - m4f):
-											p, d = 'Предмет', str(datetime.datetime.now())
-											try:
-												await bot.send_message(rowrt[0], (fr'🔵<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 4 🔵'
-													f'\n\n'
-													fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-											except:
-												await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
-									if m3m_1 + m3m_2 + m3m_3 +m3m_4 > m3f:
-										for i in range(m3m_1 + m3m_2 + m3m_3 +m3m_4 - m3f):
-											p, d = 'Предмет', str(datetime.datetime.now())
-											try:
-												await bot.send_message(rowrt[0], (fr'🟠<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 3 🟠'
-													f'\n\n'
-													fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-											except:
-												await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
-									if m2m_1 + m2m_2 + m2m_3 +m2m_4 > m2f:
-										for i in range(m2m_1 + m2m_2 + m2m_3 +m2m_4 - m2f):
-											p, d = 'Предмет', str(datetime.datetime.now())
-											try:
-												await bot.send_message(rowrt[0], (fr'🔴<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 2 🔴'
-													f'\n\n'
-													fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-											except:
-												await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
-									if m1m_1 + m1m_2 + m1m_3 + m1m_4 > m1f:
-										for i in range(m1m_1 + m1m_2 + m1m_3 + m1m_4 - m1f):
-											p, d = 'Предмет', str(datetime.datetime.now())
-											try:
-												await bot.send_message(rowrt[0], (fr'🔴<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 1 🔴'
-													f'\n\n'
-													fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')							
-											except:
-												await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
-							ser = [s['Предмет'], f'{m5m_1} {m5m_2} {m5m_3} {m5m_4}', f'{m4m_1} {m4m_2} {m4m_3} {m4m_4}', f'{m3m_1} {m3m_2} {m3m_3} {m3m_4}', f'{m2m_1} {m2m_2} {m2m_3} {m2m_4}', f'{m1m_1} {m1m_2} {m1m_3} {m1m_4}', s['str']]
-							cursor.execute(f"INSERT INTO t{rowrt[0]} VALUES(?,?,?,?,?,?,?);", ser)
-							connect.commit()
+						if col4 != -1:
+							for s in spg:
+								m1m_1, m2m_1, m3m_1, m4m_1, m5m_1, n = 0, 0, 0, 0, 0, 1
+								m1m_2, m2m_2, m3m_2, m4m_2, m5m_2 = 0, 0, 0, 0, 0
+								m1m_3, m2m_3, m3m_3, m4m_3, m5m_3 = 0, 0, 0, 0, 0
+								m1m_4, m2m_4, m3m_4, m4m_4, m5m_4 = 0, 0, 0, 0, 0
+								c1, c2, c3, c4 = map(int, s['Colvo'].split())
+								for mark in list(s['Оценки'].split()):
+									if int(mark) == 5:
+										if n <= c1:
+											m5m_1 +=1
+										elif n <= c1 + c2:
+											m5m_2 += 1
+										elif n <= c1 + c2 + c3:
+											m5m_3 += 1
+										else:
+											m5m_4 += 1
+										n+=1
+									elif int(mark) == 4:
+										if n <= c1:
+											m4m_1 +=1
+										elif n <= c1 + c2:
+											m4m_2 += 1
+										elif n <= c1 + c2 + c3:
+											m4m_3 += 1
+										else:
+											m4m_4 += 1
+										n+=1
+									elif int(mark) == 3:
+										if n <= c1:
+											m3m_1 +=1
+										elif n <= c1 + c2:
+											m3m_2 += 1
+										elif n <= c1 + c2 + c3:
+											m3m_3 += 1
+										else:
+											m3m_4 += 1
+										n+=1
+									elif int(mark) == 2:
+										if n <= c1:
+											m2m_1 +=1
+										elif n <= c1 + c2:
+											m2m_2 += 1
+										elif n <= c1 + c2 + c3:
+											m2m_3 += 1
+										else:
+											m2m_4 += 1
+										n+=1
+									elif int(mark) == 1:
+										if n <= c1:
+											m1m_1 +=1
+										elif n <= c1 + c2:
+											m1m_2 += 1
+										elif n <= c1 + c2 + c3:
+											m1m_3 += 1
+										else:
+											m1m_4 += 1
+										n+=1
+								for row in records:
+									if row[0] == s['Предмет']:
+										m5f, m4f, m3f, m2f, m1f = sum(map(int,row[1].split())), sum(map(int,row[2].split())), sum(map(int,row[3].split())), sum(map(int,row[4].split())), sum(map(int,row[5].split())) #старые
+										ws = types.InlineKeyboardMarkup()
+										ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+										p = 'Предмет'
+										if len(s[p]) > 32:
+											prr = s[p][0:30] + '...'
+										else:
+											prr = s[p]
+										ws.add(types.InlineKeyboardButton(text = f'📊Статистика по предмету', callback_data = f'P{prr}'))
+										#ws2 = types.InlineKeyboardMarkup(text = 'Посмотреть статистику по предмету', callback_data='qwertyuiop')
+										ws.add(ws1)
+										if m5m_1 + m5m_2 + m5m_3 +m5m_4 >= m5f:
+											for i in range(m5m_1 + m5m_2 + m5m_3 +m5m_4 - m5f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												await bot.send_message(-1001984000978, f'{s[p]}')
+												try:	
+													await bot.send_message(rowrt[0], (fr'🟢<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 5 🟢'
+														f'\n\n'
+														fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										else:
+											for i in range(0 - m5m_1 - m5m_2 - m5m_3 - m5m_4 + m5f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												await bot.send_message(-1001984000978, f'—{s[p]}')
+												try:	
+													await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 5</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+														f'\n\n'
+														fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										if m4m_1 + m4m_2 + m4m_3 +m4m_4 >= m4f:
+											for i in range(m4m_1 + m4m_2 + m4m_3 +m4m_4 - m4f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												try:
+													await bot.send_message(rowrt[0], (fr'🔵<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 4 🔵'
+														f'\n\n'
+														fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										else:
+											for i in range(0 - m4m_1 - m4m_2 - m4m_3 - m4m_4 + m4f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												await bot.send_message(-1001984000978, f'—{s[p]}')
+												try:	
+													await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 4</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+														f'\n\n'
+														fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										if m3m_1 + m3m_2 + m3m_3 +m3m_4 >= m3f:
+											for i in range(m3m_1 + m3m_2 + m3m_3 +m3m_4 - m3f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												try:
+													await bot.send_message(rowrt[0], (fr'🟠<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 3 🟠'
+														f'\n\n'
+														fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										else:
+											for i in range(0 - m3m_1 - m3m_2 - m3m_3 - m3m_4 + m3f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												await bot.send_message(-1001984000978, f'—{s[p]}')
+												try:	
+													await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 3</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+														f'\n\n'
+														fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										if m2m_1 + m2m_2 + m2m_3 +m2m_4 >= m2f:
+											for i in range(m2m_1 + m2m_2 + m2m_3 +m2m_4 - m2f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												try:
+													await bot.send_message(rowrt[0], (fr'🔴<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 2 🔴'
+														f'\n\n'
+														fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										else:
+											for i in range(0 - m2m_1 - m2m_2 - m2m_3 - m2m_4 + m2f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												await bot.send_message(-1001984000978, f'—{s[p]}')
+												try:	
+													await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 2</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+														f'\n\n'
+														fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										if m1m_1 + m1m_2 + m1m_3 + m1m_4 >= m1f:
+											for i in range(m1m_1 + m1m_2 + m1m_3 + m1m_4 - m1f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												try:
+													await bot.send_message(rowrt[0], (fr'🔴<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 1 🔴'
+														f'\n\n'
+														fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')							
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										else:
+											for i in range(0 - m1m_1 - m1m_2 - m1m_3 - m1m_4 + m1f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												await bot.send_message(-1001984000978, f'—{s[p]}')
+												try:	
+													await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 1</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+														f'\n\n'
+														fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+								ser = [s['Предмет'], f'{m5m_1} {m5m_2} {m5m_3} {m5m_4}', f'{m4m_1} {m4m_2} {m4m_3} {m4m_4}', f'{m3m_1} {m3m_2} {m3m_3} {m3m_4}', f'{m2m_1} {m2m_2} {m2m_3} {m2m_4}', f'{m1m_1} {m1m_2} {m1m_3} {m1m_4}', s['str']]
+								cursor.execute(f"INSERT INTO t{rowrt[0]} VALUES(?,?,?,?,?,?,?);", ser)
+								connect.commit()
+						else:
+							for s in spg:
+								m1m_1, m2m_1, m3m_1, m4m_1, m5m_1, n = 0, 0, 0, 0, 0, 1
+								m1m_2, m2m_2, m3m_2, m4m_2, m5m_2 = 0, 0, 0, 0, 0
+								m1m_3, m2m_3, m3m_3, m4m_3, m5m_3 = 0, 0, 0, 0, 0
+								c1, c2, c3 = map(int, s['Colvo'].split())
+								for mark in list(s['Оценки'].split()):
+									if int(mark) == 5:
+										if n <= c1:
+											m5m_1 +=1
+										elif n <= c1 + c2:
+											m5m_2 += 1
+										else:
+											m5m_3 += 1
+										n+=1
+									elif int(mark) == 4:
+										if n <= c1:
+											m4m_1 +=1
+										elif n <= c1 + c2:
+											m4m_2 += 1
+										else:
+											m4m_3 += 1
+										n+=1
+									elif int(mark) == 3:
+										if n <= c1:
+											m3m_1 +=1
+										elif n <= c1 + c2:
+											m3m_2 += 1
+										else:
+											m3m_3 += 1
+										n+=1
+									elif int(mark) == 2:
+										if n <= c1:
+											m2m_1 +=1
+										elif n <= c1 + c2:
+											m2m_2 += 1
+										else:
+											m2m_3 += 1
+										n+=1
+									elif int(mark) == 1:
+										if n <= c1:
+											m1m_1 +=1
+										elif n <= c1 + c2:
+											m1m_2 += 1
+										else:
+											m1m_3 += 1
+										n+=1
+								for row in records:
+									if row[0] == s['Предмет']:
+										m5f, m4f, m3f, m2f, m1f = sum(map(int,row[1].split())), sum(map(int,row[2].split())), sum(map(int,row[3].split())), sum(map(int,row[4].split())), sum(map(int,row[5].split())) #старые
+										ws = types.InlineKeyboardMarkup()
+										ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+										p = 'Предмет'
+										if len(s[p]) > 32:
+											prr = s[p][0:30] + '...'
+										else:
+											prr = s[p]
+										ws.add(types.InlineKeyboardButton(text = f'📊Статистика по предмету', callback_data = f'P{prr}'))
+										#ws2 = types.InlineKeyboardMarkup(text = 'Посмотреть статистику по предмету', callback_data='qwertyuiop')
+										ws.add(ws1)
+										if m5m_1 + m5m_2 + m5m_3 >= m5f:
+											for i in range(m5m_1 + m5m_2 + m5m_3 - m5f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												await bot.send_message(-1001984000978, f'{s[p]}')
+												try:	
+													await bot.send_message(rowrt[0], (fr'🟢<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 5 🟢'
+														f'\n\n'
+														fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										else:
+											for i in range(0 - m5m_1 - m5m_2 - m5m_3 + m5f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												await bot.send_message(-1001984000978, f'—{s[p]}')
+												try:	
+													await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 5</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+														f'\n\n'
+														fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										if m4m_1 + m4m_2 + m4m_3 >= m4f:
+											for i in range(m4m_1 + m4m_2 + m4m_3 - m4f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												try:
+													await bot.send_message(rowrt[0], (fr'🔵<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 4 🔵'
+														f'\n\n'
+														fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										else:
+											for i in range(0 - m4m_1 - m4m_2 - m4m_3 + m4f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												await bot.send_message(-1001984000978, f'—{s[p]}')
+												try:	
+													await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 4</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+														f'\n\n'
+														fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										if m3m_1 + m3m_2 + m3m_3 >= m3f:
+											for i in range(m3m_1 + m3m_2 + m3m_3 - m3f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												try:
+													await bot.send_message(rowrt[0], (fr'🟠<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 3 🟠'
+														f'\n\n'
+														fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										else:
+											for i in range(0 - m3m_1 - m3m_2 - m3m_3 + m3f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												await bot.send_message(-1001984000978, f'—{s[p]}')
+												try:	
+													await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 3</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+														f'\n\n'
+														fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										if m2m_1 + m2m_2 + m2m_3 >= m2f:
+											for i in range(m2m_1 + m2m_2 + m2m_3 - m2f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												try:
+													await bot.send_message(rowrt[0], (fr'🔴<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 2 🔴'
+														f'\n\n'
+														fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										else:
+											for i in range(0 - m2m_1 - m2m_2 - m2m_3 + m2f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												await bot.send_message(-1001984000978, f'—{s[p]}')
+												try:	
+													await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 2</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+														f'\n\n'
+														fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										if m1m_1 + m1m_2 + m1m_3 >= m1f:
+											for i in range(m1m_1 + m1m_2 + m1m_3 - m1f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												try:
+													await bot.send_message(rowrt[0], (fr'🔴<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 1 🔴'
+														f'\n\n'
+														fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')							
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+										else:
+											for i in range(0 - m1m_1 - m1m_2 - m1m_3 + m1f):
+												p, d = 'Предмет', str(datetime.datetime.now())
+												await bot.send_message(-1001984000978, f'—{s[p]}')
+												try:	
+													await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 1</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+														f'\n\n'
+														fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+												except:
+													await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
+								ser = [s['Предмет'], f'{m5m_1} {m5m_2} {m5m_3}', f'{m4m_1} {m4m_2} {m4m_3}', f'{m3m_1} {m3m_2} {m3m_3}', f'{m2m_1} {m2m_2} {m2m_3}', f'{m1m_1} {m1m_2} {m1m_3}', s['str']]
+								cursor.execute(f"INSERT INTO t{rowrt[0]} VALUES(?,?,?,?,?,?,?);", ser)
+								connect.commit()
 					await asyncio.sleep(1.0)
-				await bot.send_message(ADMIN_CHANNEL, 'Парсинг оценок выполнен')
+				await bot.send_message(-1001984000978, 'Парсинг оценок выполнен')
 				await asyncio.sleep(300.0)
 			except:
-				await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+				await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
 	else:
 		await bot.delete_message(message.from_user.id, message.message_id)
 @bot.callback_query_handler(lambda call: call.data == 'profile')
@@ -315,7 +535,7 @@ async def podklok(call):
 	sdf = [call.from_user.id, 'login-and-password']
 	cursor.execute("INSERT INTO states VALUES(?,?);", sdf)
 	connect.commit()
-	await bot.send_message(call.from_user.id, '🌐Соединение с аккаунтом *ELSCHOOL*\n\nВведите Ваши логин и пароль от электронного журнала Elschool, каждое в новой строке\n\n_Пример:_\n_Иванов Иван_\n_надёжный-пароль12345_', parse_mode='markdown')
+	await bot.send_message(call.from_user.id, '🌐Соединение с аккаунтом *ELSCHOOL*\n\nВведите Ваши логин и пароль от электронного журнала Elschool, каждое в новой строке\n\n_Пример:_\n_Иванов Иван_\n_надёжный-пароль12345_\n\n*Важно:* это должен быть аккаунт *ученика!*', parse_mode='markdown')
 
 @bot.message_handler(content_types = ['text'])
 async def get(message):
@@ -342,9 +562,9 @@ async def get(message):
 				cursor.execute("DELETE FROM states WHERE user_id=?", (message.from_user.id,))
 				connect.commit()
 				zx = types.InlineKeyboardMarkup()
-				zx1 = types.InlineKeyboardButton(text = 'Перейти к ⚙настройкам', callback_data = 'nastr')
+				#zx1 = types.InlineKeyboardButton(text = 'Перейти к ⚙настройкам', callback_data = 'nastr')
 				zx2 = types.InlineKeyboardButton(text = '🔙В меню', callback_data = 'menu')
-				zx.add(zx1)
+				#zx.add(zx1)
 				zx.add(zx2)
 				await bot.send_message(message.from_user.id, '✅Аккаунт Elschool успешно привязан', reply_markup = zx)
 			else:
@@ -359,15 +579,15 @@ async def menu(call):
 	menu11 = types.InlineKeyboardButton(text = '📊Статистика', callback_data = 'stat1')
 	menu2 = types.InlineKeyboardButton(text = '🛠Техподдержка', callback_data = 'help')
 	menu3 = types.InlineKeyboardButton(text = '👨‍💻Исходный код', url = 'https://github.com/theslothbear/Elschool-Help-Bot')
-	menu4 = types.InlineKeyboardButton(text = '⚙Настройки', callback_data = 'nastr')
+	#menu4 = types.InlineKeyboardButton(text = '⚙Настройки', callback_data = 'nastr')
 	menu.add(menu1)
 	menu.add(menu11)
-	menu.add(menu4)
+	#menu.add(menu4)
 	menu.add(menu2, menu3)
-	if call.from_user.id == ADMIN_ID:
-		await bot.send_message(ADMIN_ID, '🏠*Главное меню Elschool Help Bot (v.0.2.1)*\n\nЧтобы запустить парсинг оценок - /parsemarksstart', parse_mode = 'markdown', reply_markup = menu)
+	if call.from_user.id == 1898836155:
+		await bot.send_message(1898836155, '🏠*Главное меню Elschool Help Bot (v.1.0.1)*\n\nЧтобы запустить парсинг оценок - /parsemarksstart', parse_mode = 'markdown', reply_markup = menu)
 	else:
-		await bot.send_message(call.from_user.id, '🏠*Главное меню Elschool Help Bot (v.0.2.1)*', parse_mode = 'markdown', reply_markup = menu)
+		await bot.send_message(call.from_user.id, '🏠*Главное меню Elschool Help Bot (v.1.0.1)*', parse_mode = 'markdown', reply_markup = menu)
 
 @bot.callback_query_handler(lambda call: call.data[0:4] == 'stat')
 async def stat(call):
@@ -519,16 +739,22 @@ async def predmet(call):
 				pil.add(types.InlineKeyboardButton(text = '🔸1 четверть', callback_data = f'Q1{row[0][0:30]}'), types.InlineKeyboardButton(text = '🔸2 четверть', callback_data = f'Q2{row[0][0:30]}'))
 				pil.add(types.InlineKeyboardButton(text = '🔸3 четверть', callback_data = f'Q3{row[0][0:30]}'), types.InlineKeyboardButton(text = '🔸4 четверть', callback_data = f'Q4{row[0][0:30]}'))
 			else:
-				pil.add(types.InlineKeyboardButton(text = '🔸1 четверть', callback_data = f'Q1{row[0][0:30]}'))
-				pil.add(types.InlineKeyboardButton(text = '🔸2 четверть', callback_data = f'Q2{row[0][0:30]}'))
-				pil.add(types.InlineKeyboardButton(text = '🔸3 четверть', callback_data = f'Q3{row[0][0:30]}'))
+				pil.add(types.InlineKeyboardButton(text = '🔸1 триместр', callback_data = f'Q1{row[0][0:30]}'))
+				pil.add(types.InlineKeyboardButton(text = '🔸2 триместр', callback_data = f'Q2{row[0][0:30]}'))
+				pil.add(types.InlineKeyboardButton(text = '🔸3 триместр', callback_data = f'Q3{row[0][0:30]}'))
+			#pil1 = types.InlineKeyboardButton(text = '👪Поделиться', switch_inline_query = '')
 			piln = types.InlineKeyboardButton(text = '🔙Назад', callback_data = 'stat1')
+			#pil.add(pil1)
 			pil.add(piln)
 			await bot.send_photo(call.from_user.id, photo = open(f'{call.from_user.id}.png', 'rb') , caption = f'*📊Годовая статистика оценок {call.from_user.first_name} {call.from_user.last_name}* по предмету "*{row[0]}*"\n\n🔹*Общий* средний балл *за год* — {round(sr_ball, 2)}\n\n*🔝Лучшая* оценка — *{best}*,\n*🔻Худшая* оценка — *{bad}*\n\n*Всего оценок — {len(sp_gr)}, из них:*\n🟢5 — {sum(map(int, row[1].split()))},\n🔵4 — {sum(map(int, row[2].split()))},\n🟠3 — {sum(map(int, row[3].split()))},\n🔴2 — {sum(map(int, row[4].split()))},\n🔴1 — {sum(map(int, row[5].split()))} \n\n_Используйте кнопки ниже для просмотра статистики по отдельным четвертям / триместрам._', parse_mode='markdown', reply_markup=pil)
 			break
+		#else:
+			#print(row[0][0:len(predmet)], predmet)
 
 @bot.callback_query_handler(lambda call: call.data[0] == 'Q')
 async def chetv(call):
+	#await bot.send_message(call.from_user.id, 'В разработке (доступно только администраторам)')
+	#return
 	try:
 		number = int(call.data[1])
 		predm = call.data[2:]
@@ -606,7 +832,7 @@ async def chetv(call):
 					sp_gr.append(round(summ/am_marks, 2))
 				import matplotlib.pyplot as plt
 				plt.clf()
-				plt.title(f'Изменение среднего балла за {number} четверть')
+				plt.title(f'Изменение среднего балла за {number} четверть/триместр')
 				plt.plot(sp_gr)
 				plt.savefig(f'{call.from_user.id}.png')
 				pil = types.InlineKeyboardMarkup()
@@ -622,12 +848,11 @@ async def chetv(call):
 				await bot.send_photo(call.from_user.id, photo = open(f'{call.from_user.id}.png', 'rb') , caption = f'*📊Cтатистика оценок {call.from_user.first_name} {call.from_user.last_name}* по предмету "*{row[0]}*" за *{number} четверть*.\n\n🔹Средний балл  — {sp_gr[-1]}\n\n*🔝Лучшая* оценка — *{best}*,\n*🔻Худшая* оценка — *{bad}*\n\n*Всего оценок — {len(sp_gr)-f}, из них:*\n🟢5 — {int(list(row[1].split())[number-1])},\n🔵4 — {int(list(row[2].split())[number-1])},\n🟠3 — {int(list(row[3].split())[number-1])},\n🔴2 — {int(list(row[4].split())[number-1])},\n🔴1 — {int(list(row[5].split())[number-1])}', parse_mode='markdown', reply_markup=pil)
 				break
 	except:
-		await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+		await bot.send_message(-1001984000978, f'{traceback.format_exc()}')
 @bot.callback_query_handler(lambda call: call.data == 'help')
 async def help(call):
 	qws = types.InlineKeyboardMarkup()
 	piln = types.InlineKeyboardButton(text = '🔙Назад', callback_data = 'menu')
 	qws.add(piln)
 	await bot.send_message(call.from_user.id, '*Нашли баг❓ \nЕсть идея или предложение❓*\n\nВы всегда можете обратиться к *@the_sloth_bear*, либо к [специальному боту](https://t.me/elschool_help_support_bot)', parse_mode = 'markdown', reply_markup=qws)
-
 asyncio.run(bot.polling(none_stop=True, interval=0))
