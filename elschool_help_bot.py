@@ -14,7 +14,7 @@ cursor = connect.cursor()
 cursor.execute("""CREATE TABLE IF NOT EXISTS users_posting(
 	user_id INTEGER,
 	login TEXT,
-	password TEXT
+	hash_password TEXT
 	)
 """)
 connect.commit()
@@ -22,7 +22,7 @@ connect.commit()
 cursor.execute("""CREATE TABLE IF NOT EXISTS all_users(
 	user_id INTEGER,
 	login TEXT,
-	password TEXT
+	hash_password TEXT
 	)
 """)
 connect.commit()
