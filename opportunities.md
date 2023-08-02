@@ -52,4 +52,4 @@
 
 
 
-## [Начать пользоваться ->](t.me/elschool_help_bot)
+## [Начать пользоваться ->](https://t.me/elschool_help_bot)
