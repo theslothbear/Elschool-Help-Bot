@@ -1,4 +1,4 @@
-# Elschool-Help-Bot (v.2.0.1) 🆕
+# Elschool-Help-Bot (v.2.1.1) 🆕
 
 ![062902bc-a5f4-4a0e-b779-777ff18620e2](https://user-images.githubusercontent.com/128232763/226109251-6e8c53aa-d461-40b3-9d5d-afb40bc38b2c.jpg)
 
