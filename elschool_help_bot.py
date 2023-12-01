@@ -6,10 +6,13 @@ from telebot.async_telebot import AsyncTeleBot
 from telebot import types
 import traceback
 import datetime
+import aiohttp
+import random
+import time
 
 bot = AsyncTeleBot('token')
 
-VERSION = "v.2.0.1"
+VERSION = "v.2.1.1"
 NUMBERS = {
 	"0": "0",
 	"1": "1",
@@ -25,74 +28,22 @@ NUMBERS = {
 	",": ",",
 	"-": "-"
 }
+SP_TIME = {'1': 0.0, '2': 0.0, '3': 0.0, '4': 0.0, '5': 0.0, '6': 0.0, '7': 0.0, '8': 0.0, '9': 0.0, '10': 0.0,}
 
-connect = sqlite3.connect('name_of_database.db', check_same_thread = False)
+connect = sqlite3.connect('help-els-beta.db', check_same_thread = False)
 cursor = connect.cursor()
-cursor.execute("""CREATE TABLE IF NOT EXISTS users_posting(
-	user_id INTEGER,
-	login TEXT,
-	password TEXT
-	)
-""")
-connect.commit()
 
-cursor.execute("""CREATE TABLE IF NOT EXISTS info(
-	user_id INTEGER,
-	school TEXT,
-	class TEXT
-	)
-""")
-connect.commit()
-
-
-cursor.execute("""CREATE TABLE IF NOT EXISTS all_users(
-	user_id INTEGER,
-	login TEXT,
-	password TEXT
-	)
-""")
-connect.commit()
-
-cursor.execute("""CREATE TABLE IF NOT EXISTS states(
-	user_id INTEGER,
-	type_of_state TEXT
-	)
-""")
-connect.commit()
-
-cursor.execute("""CREATE TABLE IF NOT EXISTS marks(
-	mark_id TEXT,
-	user_id INTEGER,
-	mark_value INTEGER,
-	predmet TEXT,
-	datetime_mark TEXT
-	)
-""")
-connect.commit()
-
-cursor.execute("""CREATE TABLE IF NOT EXISTS goals(
-	user_id INTEGER,
-	predmet TEXT,
-	value INTEGER
-	)
-""")
-connect.commit()  #полное
-
-cursor.execute("""CREATE TABLE IF NOT EXISTS nastr(
-	user_id INTEGER,
-	language TEXT
-	)
-""")
-connect.commit()  #полное
-
-@bot.message_handler(commands = ['addall'])
-async def addall(message):
-	if message.from_user.id == ADMIN_ID:
-		cursor.execute("SELECT * FROM all_users")
-		records = cursor.fetchall()
-		for row in records:
-			cursor.execute("INSERT INTO users_posting VALUES(?,?,?);", [row[0], row[1], row[2]])
-			connect.commit()
+@bot.message_handler(commands = ['stat'])
+async def statistika(message):
+	cursor.execute("SELECT * FROM all_users")
+	records = cursor.fetchall()
+	cursor.execute("SELECT * FROM marks")
+	rec2 = cursor.fetchall()
+	cursor.execute("SELECT * FROM nastr")
+	rec1 = cursor.fetchall()
+	p1, p2, p3, p4, p5, p6, p7, p8, p9, p10 = cursor.execute("SELECT * FROM users_posting_1").fetchall(), cursor.execute("SELECT * FROM users_posting_2").fetchall(), cursor.execute("SELECT * FROM users_posting_3").fetchall(), cursor.execute("SELECT * FROM users_posting_4").fetchall(), cursor.execute("SELECT * FROM users_posting_5").fetchall(), cursor.execute("SELECT * FROM users_posting_6").fetchall(), cursor.execute("SELECT * FROM users_posting_7").fetchall(), cursor.execute("SELECT * FROM users_posting_8").fetchall(), cursor.execute("SELECT * FROM users_posting_9").fetchall(), cursor.execute("SELECT * FROM users_posting_10").fetchall()
+	sr_time = (SP_TIME['1'] + SP_TIME['2'] + SP_TIME['3'] + SP_TIME['4'] + SP_TIME['5'] + SP_TIME['6'] + SP_TIME['7'] + SP_TIME['8'] + SP_TIME['9'] + SP_TIME['10'])//10
+	await bot.send_message(message.from_user.id, f'*📊Статистика* пользователей *ElsHelp*\n\n🔹Общее количество *👤пользователей* — {len(records)};\n🔹Общее количество *✔полученных* оценок — {len(rec2)}\n\n*Распределение* групп *парсинга*:\n1️⃣ — {len(p1)}\n2️⃣ — {len(p2)}\n3️⃣ — {len(p3)}\n4️⃣ — {len(p4)}\n5️⃣ — {len(p5)}\n6️⃣ — {len(p6)}\n7️⃣ — {len(p7)}\n8️⃣ — {len(p8)}\n9️⃣ — {len(p9)}\n🔟 — {len(p10)}\n\n*🕐Среднее время* парсинга — {sr_time//60} минут, {sr_time % 60} секунд.', parse_mode = 'markdown')
 
 @bot.message_handler(commands = ['sendall'])
 async def sendall(message):
@@ -103,11 +54,17 @@ async def sendall(message):
 		gth = types.InlineKeyboardMarkup()
 		gth1 = types.InlineKeyboardButton(text = '❎', callback_data='delete')
 		gth.add(gth1)
+		h = 0
 		for row in records:
 			try:
 				await bot.send_message(row[0], t, reply_markup=gth, parse_mode='markdown')
+				h+=1
+				await asyncio.sleep(1.0)
 			except:
-				await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
+				#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+				await asyncio.sleep(1.0)
+		await bot.send_message(ADMIN_CHANNEL, f'Рассылка завершена. Количество получивших её пользователей: {h}')
+
 @bot.callback_query_handler(lambda call: call.data == 'delete')
 async def delete(call):
 	await bot.delete_message(call.from_user.id, call.message.message_id)
@@ -125,7 +82,7 @@ async def start(message):
 		menu11 = types.InlineKeyboardButton(text = '📊Статистика', callback_data = 'stat1')
 		menu2 = types.InlineKeyboardButton(text = '🛠Техподдержка', callback_data = 'help')
 		#menu_v = types.InlineKeyboardButton(text = '❓Возможности', callback_data = 'vozmoz')
-		webAppTest = types.WebAppInfo("https://github.com/theslothbear/Elschool-Help-Bot/blob/main/opportunities.md")
+		webAppTest = types.WebAppInfo("https://github.com/theslothbear/Elschool-Help-Bot/blob/main/opportunities.md") #создаем webappinfo - формат хранения url
 		one_butt = types.InlineKeyboardButton(text="❓Возможности", web_app=webAppTest)
 		menu3 = types.InlineKeyboardButton(text = '👨‍💻Исходный код', url = 'https://github.com/theslothbear/Elschool-Help-Bot')
 		menu4 = types.InlineKeyboardButton(text = '⚙Настройки', callback_data = 'nastr')
@@ -161,16 +118,26 @@ async def start(message):
 			await bot.send_photo(message.from_user.id, photo = 'https://imgur.com/nbDpsEi.jpg', caption = f'🏠*Main menu of Elschool Help Bot ({VERSION})*', parse_mode = 'markdown', reply_markup = menu)
 
 
-@bot.message_handler(commands = ['parsemarksstart'])
+@bot.message_handler(func=lambda message: len(message.text) > 16 and message.text[0:16] == "/parsemarksstart")
 async def parse_marks(message):
 	if message.from_user.id == ADMIN_ID:
-		await bot.send_message(ADMIN_CHANNEL_ID, f'Парсинг запущен')
+		try:
+			if len(message.text) == 18:
+				n_posting = message.text[16] + message.text[17]
+			else:
+				n_posting = message.text[16]
+		except:
+			await bot.send_message(ADMIN_CHANNEL, f'Ошибка: не назван номер группы парсинга')
+			return
+		await bot.send_message(ADMIN_CHANNEL, f'Парсинг {n_posting} запущен')
 		while True:
+			am = 0
 			try:
-				cursor.execute("SELECT * FROM users_posting")
+				start_time = time.time()
+				cursor.execute(f"SELECT * FROM users_posting_{n_posting}")
 				recordsrt = cursor.fetchall()
 				for rowrt in recordsrt:
-					F = True
+					F, flag_norm = True, True
 					cursor.execute(f"""CREATE TABLE IF NOT EXISTS t{rowrt[0]}(
 						predmet TEXT,
 						m5_marks TEXT,
@@ -190,789 +157,812 @@ async def parse_marks(message):
 							r1239 = row1239
 							break
 
-					session = requests.Session()
-					url = 'https://elschool.ru/Logon/Index'
-					user_agent_val = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36'
-					r = session.get(url, headers = {
-					    'User-Agent': user_agent_val
-					}, verify = False)
-					session.headers.update({'Referer':url})
-					session.headers.update({'User-Agent':user_agent_val})
-					_xsrf = session.cookies.get('_xsrf', domain=".elschool.ru")
-					post_request = session.post(url, {
-					     'login': f'{rowrt[1]}',
-					     'password': f'{rowrt[2]}',
-					     '_xsrf':_xsrf,
-					})
-					r1 = session.get('https://elschool.ru/users/diaries', headers = {
-					    'User-Agent': user_agent_val
-					}, verify = False)
-					session.headers.update({'Referer':url})
-					session.headers.update({'User-Agent':user_agent_val})
-					_xsrf = session.cookies.get('_xsrf', domain=".elschool.ru")
-					s = r1.text.split('class="btn">Табель</a>')[0].split(r'href="')[-1].split(r'"')[0]
-					#print(f'https://elschool.ru/users/diaries/{s}')
-					r2 = session.get(f'https://elschool.ru/users/diaries/{s}', headers = {
-					    'User-Agent': user_agent_val
-					}, verify = False)
-					session.headers.update({'Referer':url})
-					session.headers.update({'User-Agent':user_agent_val})
-					_xsrf = session.cookies.get('_xsrf', domain=".elschool.ru")
-					
-					spg, fl, col4 = [], True, -1
-					for i in range(1, 100):
-						str_marks = ''
-						s1 = list(r2.text.split(f'<tbody period="{i}"'))
-						if len(s1) > 1:
-							pr = s1[0].split(r'<th colspan="')[-1].split('>')[1].split('<')[0]
-							spo = []
-							l1 = list(s1[1].split(r'<td class="grades-period-name">1')[1].split('<span>'))
-							if s1[1].split(r'<td class="grades-period-name">1')[1][1:4] == 'чет':
-								col4 = s1[1].split(r'<td class="grades-period-name">4')[1].split('<td class="grades-period-name">1')[0].count('<span>')
-								col3 = s1[1].split(r'<td class="grades-period-name">3')[1].split('<td class="grades-period-name">1')[0].count('<span>') - col4
-								col2 = s1[1].split(r'<td class="grades-period-name">2')[1].split('<td class="grades-period-name">1')[0].count('<span>') - col3 - col4
-								col1 = s1[1].split(r'<td class="grades-period-name">1')[1].split('<td class="grades-period-name">1')[0].count('<span>') - col2 - col3 - col4
-					        	#print(f'{pr}: 1 четверть - {col1}, 2 четверть - {col2}, 3 четверть - {col3}, 4 четверть - {col4}')
-							elif s1[1].split(r'<td class="grades-period-name">1')[1][1:4] == 'три':
-								col3 = s1[1].split(r'<td class="grades-period-name">3')[1].split('<td class="grades-period-name">1')[0].count('<span>')
-								col2 = s1[1].split(r'<td class="grades-period-name">2')[1].split('<td class="grades-period-name">1')[0].count('<span>') - col3
-								col1 = s1[1].split(r'<td class="grades-period-name">1')[1].split('<td class="grades-period-name">1')[0].count('<span>') - col2 - col3
-							for r in l1[1:]:
-								yu = r.split('</span>')[0]
-								spo.append(yu)
-								str_marks += f'{yu} '
-							if col4 != -1:
-								spg.append({'Предмет': f'{pr}', 'Оценки': f'{" ".join(spo)}', 'Colvo': f'{col1} {col2} {col3} {col4}', 'str': str_marks[0:len(str_marks)-1]})
-							else:
-								spg.append({'Предмет': f'{pr}', 'Оценки': f'{" ".join(spo)}', 'Colvo': f'{col1} {col2} {col3}', 'str': str_marks[0:len(str_marks)-1]})
+					async with aiohttp.ClientSession() as session:
+						url = 'https://elschool.ru/Logon/Index'
+						user_agent_val = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36'
+						async with session.get(url, headers = {'User-Agent': user_agent_val}, verify_ssl = False) as r:
+							session.headers.update({'Referer':url})
+							session.headers.update({'User-Agent':user_agent_val})
+							_xsrf = None
+							async with session.post(url, data={'login': f'{rowrt[1]}','password': f'{rowrt[2]}','_xsrf':_xsrf}) as post_request:
+								async with session.get('https://elschool.ru/users/diaries', headers = {'User-Agent': user_agent_val}, verify_ssl = False) as r1:
+									session.headers.update({'Referer':url})
+									session.headers.update({'User-Agent':user_agent_val})
+									s = await r1.text()
+									s = s.split('class="btn">Табель</a>')[0].split(r'href="')[-1].split(r'"')[0]
+									#print(f'https://elschool.ru/users/diaries/{s}')
+									async with session.get(f'https://elschool.ru/users/diaries/{s}', headers = {'User-Agent': user_agent_val}, verify_ssl = False) as r22:
+										r2 = await r22.text()
+										session.headers.update({'Referer':url})
+										session.headers.update({'User-Agent':user_agent_val})
+										
+										spg, fl, col4 = [], True, -1
+										for i in range(1, 100):
+											str_marks = ''
+											s1 = list(r2.split(f'<tbody period="{i}"'))
+											if len(s1) > 1:
+												pr = s1[0].split(r'<th colspan="')[-1].split('>')[1].split('<')[0]
+												spo = []
+												l1 = list(s1[1].split(r'<td class="grades-period-name">1')[1].split('<span>'))
+												if s1[1].split(r'<td class="grades-period-name">1')[1][1:4] == 'чет':
+													col4 = s1[1].split(r'<td class="grades-period-name">4')[1].split('<td class="grades-period-name">1')[0].count('<span>')
+													col3 = s1[1].split(r'<td class="grades-period-name">3')[1].split('<td class="grades-period-name">1')[0].count('<span>') - col4
+													col2 = s1[1].split(r'<td class="grades-period-name">2')[1].split('<td class="grades-period-name">1')[0].count('<span>') - col3 - col4
+													col1 = s1[1].split(r'<td class="grades-period-name">1')[1].split('<td class="grades-period-name">1')[0].count('<span>') - col2 - col3 - col4
+										        	#print(f'{pr}: 1 четверть - {col1}, 2 четверть - {col2}, 3 четверть - {col3}, 4 четверть - {col4}')
+												elif s1[1].split(r'<td class="grades-period-name">1')[1][1:4] == 'три':
+													col3 = s1[1].split(r'<td class="grades-period-name">3')[1].split('<td class="grades-period-name">1')[0].count('<span>')
+													col2 = s1[1].split(r'<td class="grades-period-name">2')[1].split('<td class="grades-period-name">1')[0].count('<span>') - col3
+													col1 = s1[1].split(r'<td class="grades-period-name">1')[1].split('<td class="grades-period-name">1')[0].count('<span>') - col2 - col3
+												elif s1[1].split(r'<td class="grades-period-name">1')[1][1:4] == 'пол':
+													#await bot.send_message(ADMIN_CHANNEL, f'{str(await bot.get_chat_member(rowrt[0], rowrt[0]))}')
+													col4 = 0
+													col3 = s1[1].split(r'<td class="grades-period-name">2')[1].split('<td class="grades-period-name">1')[0].count('<span>') - col4
+													col2 = 0
+													col1 = s1[1].split(r'<td class="grades-period-name">1')[1].split('<td class="grades-period-name">1')[0].count('<span>') - col2 - col3 - col4
+												for r in l1[1:]:
+													yu = r.split('</span>')[0]
+													spo.append(yu)
+													str_marks += f'{yu} '
+												if col4 != -1 and flag_norm:
+													spg.append({'Предмет': f'{pr}', 'Оценки': f'{" ".join(spo)}', 'Colvo': f'{col1} {col2} {col3} {col4}', 'str': str_marks[0:len(str_marks)-1]})
+												elif flag_norm:
+													spg.append({'Предмет': f'{pr}', 'Оценки': f'{" ".join(spo)}', 'Colvo': f'{col1} {col2} {col3}', 'str': str_marks[0:len(str_marks)-1]})
 
-						else:
-							if i == 1:
-								F = False
-							break
-					if spg == [] and F:
-						if r1239[1] == 'RU':
-							tyi = types.InlineKeyboardMarkup()
-							pr1 = types.InlineKeyboardButton(text = '✏Изменить аккаунт ELSCHOOL', callback_data='podkl')
-							zx2 = types.InlineKeyboardButton(text = '🔙В меню', callback_data = 'menu')
-							tyi.add(pr1)
-							tyi.add(zx2)
-							cursor.execute("DELETE FROM users_posting WHERE user_id=?", (rowrt[0],))
-							connect.commit()
-							await bot.send_message(rowrt[0], '❌*Ошибка!* \nПохоже, логин либо пароль введены неправильно😿\n\n*🔕Уведомления отключены*', reply_markup=tyi, parse_mode='markdown')
-						elif r1239[1] == 'EN':
-							yi = types.InlineKeyboardMarkup()
-							pr1 = types.InlineKeyboardButton(text = '✏Change ELSCHOOL account', callback_data='podkl')
-							zx2 = types.InlineKeyboardButton(text = '🔙Menu', callback_data = 'menu')
-							tyi.add(pr1)
-							tyi.add(zx2)
-							cursor.execute("DELETE FROM users_posting WHERE user_id=?", (rowrt[0],))
-							connect.commit()
-							await bot.send_message(rowrt[0], '❌*Error!* \n Looks like the username or password entered incorrectly😿\n\n*🔕Notifications are disabled*', reply_markup=tyi, parse_mode='markdown')
-					elif F:
-						cursor.execute(f"SELECT * FROM t{rowrt[0]}")
-						records = cursor.fetchall()
-						cursor.execute(f"DELETE FROM t{rowrt[0]}")
-						connect.commit()
-						if col4 != -1:
-							for s in spg:
-								m1m_1, m2m_1, m3m_1, m4m_1, m5m_1, n = 0, 0, 0, 0, 0, 1
-								m1m_2, m2m_2, m3m_2, m4m_2, m5m_2 = 0, 0, 0, 0, 0
-								m1m_3, m2m_3, m3m_3, m4m_3, m5m_3 = 0, 0, 0, 0, 0
-								m1m_4, m2m_4, m3m_4, m4m_4, m5m_4 = 0, 0, 0, 0, 0
-								c1, c2, c3, c4 = map(int, s['Colvo'].split())
-								for mark in list(s['Оценки'].split()):
-									if int(mark) == 5:
-										if n <= c1:
-											m5m_1 +=1
-										elif n <= c1 + c2:
-											m5m_2 += 1
-										elif n <= c1 + c2 + c3:
-											m5m_3 += 1
-										else:
-											m5m_4 += 1
-										n+=1
-									elif int(mark) == 4:
-										if n <= c1:
-											m4m_1 +=1
-										elif n <= c1 + c2:
-											m4m_2 += 1
-										elif n <= c1 + c2 + c3:
-											m4m_3 += 1
-										else:
-											m4m_4 += 1
-										n+=1
-									elif int(mark) == 3:
-										if n <= c1:
-											m3m_1 +=1
-										elif n <= c1 + c2:
-											m3m_2 += 1
-										elif n <= c1 + c2 + c3:
-											m3m_3 += 1
-										else:
-											m3m_4 += 1
-										n+=1
-									elif int(mark) == 2:
-										if n <= c1:
-											m2m_1 +=1
-										elif n <= c1 + c2:
-											m2m_2 += 1
-										elif n <= c1 + c2 + c3:
-											m2m_3 += 1
-										else:
-											m2m_4 += 1
-										n+=1
-									elif int(mark) == 1:
-										if n <= c1:
-											m1m_1 +=1
-										elif n <= c1 + c2:
-											m1m_2 += 1
-										elif n <= c1 + c2 + c3:
-											m1m_3 += 1
-										else:
-											m1m_4 += 1
-										n+=1
-								for row in records:
-									if row[0] == s['Предмет']:
-										m5f, m4f, m3f, m2f, m1f = sum(map(int,row[1].split())), sum(map(int,row[2].split())), sum(map(int,row[3].split())), sum(map(int,row[4].split())), sum(map(int,row[5].split())) #старые
-										p = 'Предмет'
-										if len(s[p]) > 32:
-											prr = s[p][0:30] + '...'
-										else:
-											prr = s[p]
-										#ws.add(ws1)
-										if m5m_1 + m5m_2 + m5m_3 +m5m_4 >= m5f:
-											for i in range(m5m_1 + m5m_2 + m5m_3 +m5m_4 - m5f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												m_id = await create_new_id()
-												p, d = 'Предмет', str(datetime.datetime.now())
-												cursor.execute("INSERT INTO marks VALUES(?,?,?,?,?);", [m_id, rowrt[0], 5, s[p], d[0:len(d)-7]])
+											else:
+												if i == 1:
+													F = False
+												break
+										if spg == [] and F and flag_norm:
+											if r1239[1] == 'RU':
+												tyi = types.InlineKeyboardMarkup()
+												pr1 = types.InlineKeyboardButton(text = '✏Изменить аккаунт ELSCHOOL', callback_data='podkl')
+												zx2 = types.InlineKeyboardButton(text = '🔙В меню', callback_data = 'menu')
+												tyi.add(pr1)
+												tyi.add(zx2)
+												cursor.execute(f"DELETE FROM users_posting_{n_posting} WHERE user_id=?", (rowrt[0],))
 												connect.commit()
-												await bot.send_message(ADMIN_CHANNEL_ID, f'{s[p]}')
-												if r1239[1] == 'RU':
-													ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
-												elif r1239[1] == 'EN':
-													ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
-												ws.add(ws2)
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'🟢<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 5 🟢'
-															f'\n\n'
-															fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'🟢<b>New mark</b> on the subject<b>"{s[p]}"</b>: 5 🟢'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										else:
-											for i in range(0 - m5m_1 - m5m_2 - m5m_3 - m5m_4 + m5f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												p, d = 'Предмет', str(datetime.datetime.now())
-												await bot.send_message(ADMIN_CHANNEL_ID, f'{s[p]}')
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 5</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
-															f'\n\n'
-															fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'❎<b>Your 5 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										if m4m_1 + m4m_2 + m4m_3 +m4m_4 >= m4f:
-											for i in range(m4m_1 + m4m_2 + m4m_3 +m4m_4 - m4f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												m_id = await create_new_id()
-												p, d = 'Предмет', str(datetime.datetime.now())
-												cursor.execute("INSERT INTO marks VALUES(?,?,?,?,?);", [m_id, rowrt[0], 4, s[p], d[0:len(d)-7]])
+												await bot.send_message(rowrt[0], '❌*Ошибка!* \nПохоже, логин либо пароль введены неправильно😿\n\n*🔕Уведомления отключены*', reply_markup=tyi, parse_mode='markdown')
+											elif r1239[1] == 'EN':
+												yi = types.InlineKeyboardMarkup()
+												pr1 = types.InlineKeyboardButton(text = '✏Change ELSCHOOL account', callback_data='podkl')
+												zx2 = types.InlineKeyboardButton(text = '🔙Menu', callback_data = 'menu')
+												tyi.add(pr1)
+												tyi.add(zx2)
+												cursor.execute(f"DELETE FROM users_posting_{n_posting} WHERE user_id=?", (rowrt[0],))
 												connect.commit()
-												await bot.send_message(ADMIN_CHANNEL_ID, f'{s[p]}')
-												if r1239[1] == 'RU':
-													ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
-												elif r1239[1] == 'EN':
-													ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
-												ws.add(ws2)
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'🔵<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 4 🔵'
-															f'\n\n'
-															fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'🔵<b>New mark</b> on the subject<b>"{s[p]}"</b>: 4 🔵'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										else:
-											for i in range(0 - m4m_1 - m4m_2 - m4m_3 - m4m_4 + m4f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												p, d = 'Предмет', str(datetime.datetime.now())
-												await bot.send_message(ADMIN_CHANNEL_ID, f'{s[p]}')
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 4</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
-															f'\n\n'
-															fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'❎<b>Your 4 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										if m3m_1 + m3m_2 + m3m_3 +m3m_4 >= m3f:
-											for i in range(m3m_1 + m3m_2 + m3m_3 +m3m_4 - m3f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												m_id = await create_new_id()
-												p, d = 'Предмет', str(datetime.datetime.now())
-												cursor.execute("INSERT INTO marks VALUES(?,?,?,?,?);", [m_id, rowrt[0], 3, s[p], d[0:len(d)-7]])
-												connect.commit()
-												await bot.send_message(ADMIN_CHANNEL_ID, f'{s[p]}')
-												if r1239[1] == 'RU':
-													ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
-												elif r1239[1] == 'EN':
-													ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
-												ws.add(ws2)
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'🟠<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 3 🟠'
-															f'\n\n'
-															fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'🟠<b>New mark</b> on the subject<b>"{s[p]}"</b>: 3 🟠'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										else:
-											for i in range(0 - m3m_1 - m3m_2 - m3m_3 - m3m_4 + m3f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												p, d = 'Предмет', str(datetime.datetime.now())
-												await bot.send_message(ADMIN_CHANNEL_ID, f'{s[p]}')
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 3</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
-															f'\n\n'
-															fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'❎<b>Your 3 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										if m2m_1 + m2m_2 + m2m_3 +m2m_4 >= m2f:
-											for i in range(m2m_1 + m2m_2 + m2m_3 +m2m_4 - m2f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												m_id = await create_new_id()
-												p, d = 'Предмет', str(datetime.datetime.now())
-												cursor.execute("INSERT INTO marks VALUES(?,?,?,?,?);", [m_id, rowrt[0], 2, s[p], d[0:len(d)-7]])
-												connect.commit()
-												await bot.send_message(ADMIN_CHANNEL_ID, f'{s[p]}')
-												if r1239[1] == 'RU':
-													ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
-												elif r1239[1] == 'EN':
-													ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
-												ws.add(ws2)
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'🔴<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 2 🔴'
-															f'\n\n'
-															fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'🔴<b>New mark</b> on the subject<b>"{s[p]}"</b>: 2 🔴'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										else:
-											for i in range(0 - m2m_1 - m2m_2 - m2m_3 - m2m_4 + m2f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												p, d = 'Предмет', str(datetime.datetime.now())
-												await bot.send_message(ADMIN_CHANNEL_ID, f'{s[p]}')
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 2</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
-															f'\n\n'
-															fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'❎<b>Your 2 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										if m1m_1 + m1m_2 + m1m_3 + m1m_4 >= m1f:
-											for i in range(m1m_1 + m1m_2 + m1m_3 + m1m_4 - m1f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												m_id = await create_new_id()
-												p, d = 'Предмет', str(datetime.datetime.now())
-												cursor.execute("INSERT INTO marks VALUES(?,?,?,?,?);", [m_id, rowrt[0], 1, s[p], d[0:len(d)-7]])
-												connect.commit()
-												await bot.send_message(ADMIN_CHANNEL_ID, f'{s[p]}')
-												if r1239[1] == 'RU':
-													ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
-												elif r1239[1] == 'EN':
-													ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
-												ws.add(ws2)
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'🔴<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 1 🔴'
-															f'\n\n'
-															fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'🔴<b>New mark</b> on the subject<b>"{s[p]}"</b>: 1 🔴'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										else:
-											for i in range(0 - m1m_1 - m1m_2 - m1m_3 - m1m_4 + m1f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												p, d = 'Предмет', str(datetime.datetime.now())
-												await bot.send_message(ADMIN_CHANNEL_ID, f'{s[p]}')
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 1</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
-															f'\n\n'
-															fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'❎<b>Your 1 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-								ser = [s['Предмет'], f'{m5m_1} {m5m_2} {m5m_3} {m5m_4}', f'{m4m_1} {m4m_2} {m4m_3} {m4m_4}', f'{m3m_1} {m3m_2} {m3m_3} {m3m_4}', f'{m2m_1} {m2m_2} {m2m_3} {m2m_4}', f'{m1m_1} {m1m_2} {m1m_3} {m1m_4}', s['str']]
-								cursor.execute(f"INSERT INTO t{rowrt[0]} VALUES(?,?,?,?,?,?,?);", ser)
-								connect.commit()
-						else:
-							for s in spg:
-								m1m_1, m2m_1, m3m_1, m4m_1, m5m_1, n = 0, 0, 0, 0, 0, 1
-								m1m_2, m2m_2, m3m_2, m4m_2, m5m_2 = 0, 0, 0, 0, 0
-								m1m_3, m2m_3, m3m_3, m4m_3, m5m_3 = 0, 0, 0, 0, 0
-								c1, c2, c3 = map(int, s['Colvo'].split())
-								for mark in list(s['Оценки'].split()):
-									if int(mark) == 5:
-										if n <= c1:
-											m5m_1 +=1
-										elif n <= c1 + c2:
-											m5m_2 += 1
-										else:
-											m5m_3 += 1
-										n+=1
-									elif int(mark) == 4:
-										if n <= c1:
-											m4m_1 +=1
-										elif n <= c1 + c2:
-											m4m_2 += 1
-										else:
-											m4m_3 += 1
-										n+=1
-									elif int(mark) == 3:
-										if n <= c1:
-											m3m_1 +=1
-										elif n <= c1 + c2:
-											m3m_2 += 1
-										else:
-											m3m_3 += 1
-										n+=1
-									elif int(mark) == 2:
-										if n <= c1:
-											m2m_1 +=1
-										elif n <= c1 + c2:
-											m2m_2 += 1
-										else:
-											m2m_3 += 1
-										n+=1
-									elif int(mark) == 1:
-										if n <= c1:
-											m1m_1 +=1
-										elif n <= c1 + c2:
-											m1m_2 += 1
-										else:
-											m1m_3 += 1
-										n+=1
-								for row in records:
-									if row[0] == s['Предмет']:
-										m5f, m4f, m3f, m2f, m1f = sum(map(int,row[1].split())), sum(map(int,row[2].split())), sum(map(int,row[3].split())), sum(map(int,row[4].split())), sum(map(int,row[5].split())) #старые
-										ws = types.InlineKeyboardMarkup()
-										ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-										p = 'Предмет'
-										if len(s[p]) > 32:
-											prr = s[p][0:30] + '...'
-										else:
-											prr = s[p]
-										ws.add(types.InlineKeyboardButton(text = f'📊Статистика по предмету', callback_data = f'P{prr}'))
-										#ws2 = types.InlineKeyboardMarkup(text = 'Посмотреть статистику по предмету', callback_data='qwertyuiop')
-										ws.add(ws1)
-										if m5m_1 + m5m_2 + m5m_3 >= m5f:
-											for i in range(m5m_1 + m5m_2 + m5m_3 - m5f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												p, d = 'Предмет', str(datetime.datetime.now())
-												await bot.send_message(ADMIN_CHANNEL_ID, f'{s[p]}')
-												if r1239[1] == 'RU':
-													ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
-												elif r1239[1] == 'EN':
-													ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
-												ws.add(ws2)
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'🟢<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 5 🟢'
-															f'\n\n'
-															fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'🟢<b>New mark</b> on the subject<b>"{s[p]}"</b>: 5 🟢'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										else:
-											for i in range(0 - m5m_1 - m5m_2 - m5m_3 + m5f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												p, d = 'Предмет', str(datetime.datetime.now())
-												await bot.send_message(ADMIN_CHANNEL_ID, f'{s[p]}')
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 5</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
-															f'\n\n'
-															fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'❎<b>Your 5 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										if m4m_1 + m4m_2 + m4m_3 >= m4f:
-											for i in range(m4m_1 + m4m_2 + m4m_3 - m4f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												p, d = 'Предмет', str(datetime.datetime.now())
-												if r1239[1] == 'RU':
-													ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
-												elif r1239[1] == 'EN':
-													ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
-												ws.add(ws2)
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'🔵<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 4 🔵'
-															f'\n\n'
-															fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'🔵<b>New mark</b> on the subject<b>"{s[p]}"</b>: 4 🔵'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										else:
-											for i in range(0 - m4m_1 - m4m_2 - m4m_3 + m4f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												p, d = 'Предмет', str(datetime.datetime.now())
-												await bot.send_message(ADMIN_CHANNEL_ID, f'{s[p]}')
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 4</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
-															f'\n\n'
-															fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'❎<b>Your 4 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										if m3m_1 + m3m_2 + m3m_3 >= m3f:
-											for i in range(m3m_1 + m3m_2 + m3m_3 - m3f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												p, d = 'Предмет', str(datetime.datetime.now())
-												if r1239[1] == 'RU':
-													ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
-												elif r1239[1] == 'EN':
-													ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
-												ws.add(ws2)
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'🟠<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 3 🟠'
-															f'\n\n'
-															fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'🟠<b>New mark</b> on the subject<b>"{s[p]}"</b>: 3 🟠'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										else:
-											for i in range(0 - m3m_1 - m3m_2 - m3m_3 + m3f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												p, d = 'Предмет', str(datetime.datetime.now())
-												await bot.send_message(ADMIN_CHANNEL_ID, f'{s[p]}')
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 3</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
-															f'\n\n'
-															fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'❎<b>Your 3 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										if m2m_1 + m2m_2 + m2m_3 >= m2f:
-											for i in range(m2m_1 + m2m_2 + m2m_3 - m2f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												p, d = 'Предмет', str(datetime.datetime.now())
-												if r1239[1] == 'RU':
-													ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
-												elif r1239[1] == 'EN':
-													ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
-												ws.add(ws2)
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'🔴<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 2 🔴'
-															f'\n\n'
-															fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'🔴<b>New mark</b> on the subject<b>"{s[p]}"</b>: 2 🔴'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										else:
-											for i in range(0 - m2m_1 - m2m_2 - m2m_3 + m2f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												p, d = 'Предмет', str(datetime.datetime.now())
-												await bot.send_message(ADMIN_CHANNEL_ID, f'{s[p]}')
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 2</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
-															f'\n\n'
-															fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'❎<b>Your 2 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										if m1m_1 + m1m_2 + m1m_3 >= m1f:
-											for i in range(m1m_1 + m1m_2 + m1m_3 - m1f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												p, d = 'Предмет', str(datetime.datetime.now())
-												if r1239[1] == 'RU':
-													ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
-												elif r1239[1] == 'EN':
-													ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
-												ws.add(ws2)
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'🔴<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 1 🔴'
-															f'\n\n'
-															fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'🔴<b>New mark</b> on the subject<b>"{s[p]}"</b>: 1 🔴'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-										else:
-											for i in range(0 - m1m_1 - m1m_2 - m1m_3 + m1f):
-												if r1239[1] == 'RU':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
-												elif r1239[1] == 'EN':
-													ws = types.InlineKeyboardMarkup()
-													ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
-													ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
-												p, d = 'Предмет', str(datetime.datetime.now())
-												await bot.send_message(ADMIN_CHANNEL_ID, f'{s[p]}')
-												try:
-													if r1239[1] == 'RU':
-														await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 1</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
-															f'\n\n'
-															fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-													elif r1239[1] == 'EN':
-														await bot.send_message(rowrt[0], (fr'❎<b>Your 1 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
-															f'\n\n'
-															fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
-														await asyncio.sleep(1.0)
-												except:
-													await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
-								ser = [s['Предмет'], f'{m5m_1} {m5m_2} {m5m_3}', f'{m4m_1} {m4m_2} {m4m_3}', f'{m3m_1} {m3m_2} {m3m_3}', f'{m2m_1} {m2m_2} {m2m_3}', f'{m1m_1} {m1m_2} {m1m_3}', s['str']]
-								cursor.execute(f"INSERT INTO t{rowrt[0]} VALUES(?,?,?,?,?,?,?);", ser)
-								connect.commit()
-					await asyncio.sleep(5.0)
-				await bot.send_message(ADMIN_CHANNEL_ID, 'Парсинг оценок выполнен')
-				await asyncio.sleep(10.0)
+												await bot.send_message(rowrt[0], '❌*Error!* \n Looks like the username or password entered incorrectly😿\n\n*🔕Notifications are disabled*', reply_markup=tyi, parse_mode='markdown')
+										elif F and flag_norm:
+											cursor.execute(f"SELECT * FROM t{rowrt[0]}")
+											records = cursor.fetchall()
+											cursor.execute(f"DELETE FROM t{rowrt[0]}")
+											connect.commit()
+											if col4 != -1:
+												for s in spg:
+													m1m_1, m2m_1, m3m_1, m4m_1, m5m_1, n = 0, 0, 0, 0, 0, 1
+													m1m_2, m2m_2, m3m_2, m4m_2, m5m_2 = 0, 0, 0, 0, 0
+													m1m_3, m2m_3, m3m_3, m4m_3, m5m_3 = 0, 0, 0, 0, 0
+													m1m_4, m2m_4, m3m_4, m4m_4, m5m_4 = 0, 0, 0, 0, 0
+													c1, c2, c3, c4 = map(int, s['Colvo'].split())
+													for mark in list(s['Оценки'].split()):
+														if int(mark) == 5:
+															if n <= c1:
+																m5m_1 +=1
+															elif n <= c1 + c2:
+																m5m_2 += 1
+															elif n <= c1 + c2 + c3:
+																m5m_3 += 1
+															else:
+																m5m_4 += 1
+															n+=1
+														elif int(mark) == 4:
+															if n <= c1:
+																m4m_1 +=1
+															elif n <= c1 + c2:
+																m4m_2 += 1
+															elif n <= c1 + c2 + c3:
+																m4m_3 += 1
+															else:
+																m4m_4 += 1
+															n+=1
+														elif int(mark) == 3:
+															if n <= c1:
+																m3m_1 +=1
+															elif n <= c1 + c2:
+																m3m_2 += 1
+															elif n <= c1 + c2 + c3:
+																m3m_3 += 1
+															else:
+																m3m_4 += 1
+															n+=1
+														elif int(mark) == 2:
+															if n <= c1:
+																m2m_1 +=1
+															elif n <= c1 + c2:
+																m2m_2 += 1
+															elif n <= c1 + c2 + c3:
+																m2m_3 += 1
+															else:
+																m2m_4 += 1
+															n+=1
+														elif int(mark) == 1:
+															if n <= c1:
+																m1m_1 +=1
+															elif n <= c1 + c2:
+																m1m_2 += 1
+															elif n <= c1 + c2 + c3:
+																m1m_3 += 1
+															else:
+																m1m_4 += 1
+															n+=1
+													for row in records:
+														if row[0] == s['Предмет']:
+															m5f, m4f, m3f, m2f, m1f = sum(map(int,row[1].split())), sum(map(int,row[2].split())), sum(map(int,row[3].split())), sum(map(int,row[4].split())), sum(map(int,row[5].split())) #старые
+															p = 'Предмет'
+															if len(s[p]) > 32:
+																prr = s[p][0:30] + '...'
+															else:
+																prr = s[p]
+															#ws.add(ws1)
+															if m5m_1 + m5m_2 + m5m_3 +m5m_4 >= m5f:
+																for i in range(m5m_1 + m5m_2 + m5m_3 +m5m_4 - m5f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	m_id = await create_new_id()
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	cursor.execute("INSERT INTO marks VALUES(?,?,?,?,?);", [m_id, rowrt[0], 5, s[p], d[0:len(d)-7]])
+																	connect.commit()
+																	am+=1
+																	if r1239[1] == 'RU':
+																		ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
+																	elif r1239[1] == 'EN':
+																		ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
+																	ws.add(ws2)
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'🟢<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 5 🟢'
+																				f'\n\n'
+																				fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'🟢<b>New mark</b> on the subject<b>"{s[p]}"</b>: 5 🟢'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															else:
+																for i in range(0 - m5m_1 - m5m_2 - m5m_3 - m5m_4 + m5f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	am+=1
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 5</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+																				f'\n\n'
+																				fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Your 5 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															if m4m_1 + m4m_2 + m4m_3 +m4m_4 >= m4f:
+																for i in range(m4m_1 + m4m_2 + m4m_3 +m4m_4 - m4f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	m_id = await create_new_id()
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	cursor.execute("INSERT INTO marks VALUES(?,?,?,?,?);", [m_id, rowrt[0], 4, s[p], d[0:len(d)-7]])
+																	connect.commit()
+																	am+=1
+																	if r1239[1] == 'RU':
+																		ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
+																	elif r1239[1] == 'EN':
+																		ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
+																	ws.add(ws2)
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'🔵<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 4 🔵'
+																				f'\n\n'
+																				fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'🔵<b>New mark</b> on the subject<b>"{s[p]}"</b>: 4 🔵'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															else:
+																for i in range(0 - m4m_1 - m4m_2 - m4m_3 - m4m_4 + m4f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	am+=1
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 4</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+																				f'\n\n'
+																				fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Your 4 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															if m3m_1 + m3m_2 + m3m_3 +m3m_4 >= m3f:
+																for i in range(m3m_1 + m3m_2 + m3m_3 +m3m_4 - m3f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	m_id = await create_new_id()
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	cursor.execute("INSERT INTO marks VALUES(?,?,?,?,?);", [m_id, rowrt[0], 3, s[p], d[0:len(d)-7]])
+																	connect.commit()
+																	am+=1
+																	if r1239[1] == 'RU':
+																		ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
+																	elif r1239[1] == 'EN':
+																		ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
+																	ws.add(ws2)
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'🟠<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 3 🟠'
+																				f'\n\n'
+																				fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'🟠<b>New mark</b> on the subject<b>"{s[p]}"</b>: 3 🟠'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															else:
+																for i in range(0 - m3m_1 - m3m_2 - m3m_3 - m3m_4 + m3f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	am+=1
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 3</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+																				f'\n\n'
+																				fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Your 3 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															if m2m_1 + m2m_2 + m2m_3 +m2m_4 >= m2f:
+																for i in range(m2m_1 + m2m_2 + m2m_3 +m2m_4 - m2f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	m_id = await create_new_id()
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	cursor.execute("INSERT INTO marks VALUES(?,?,?,?,?);", [m_id, rowrt[0], 2, s[p], d[0:len(d)-7]])
+																	connect.commit()
+																	am+=1
+																	if r1239[1] == 'RU':
+																		ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
+																	elif r1239[1] == 'EN':
+																		ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
+																	ws.add(ws2)
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'🔴<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 2 🔴'
+																				f'\n\n'
+																				fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'🔴<b>New mark</b> on the subject<b>"{s[p]}"</b>: 2 🔴'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															else:
+																for i in range(0 - m2m_1 - m2m_2 - m2m_3 - m2m_4 + m2f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	am+=1
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 2</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+																				f'\n\n'
+																				fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Your 2 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															if m1m_1 + m1m_2 + m1m_3 + m1m_4 >= m1f:
+																for i in range(m1m_1 + m1m_2 + m1m_3 + m1m_4 - m1f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	m_id = await create_new_id()
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	cursor.execute("INSERT INTO marks VALUES(?,?,?,?,?);", [m_id, rowrt[0], 1, s[p], d[0:len(d)-7]])
+																	connect.commit()
+																	am+=1
+																	if r1239[1] == 'RU':
+																		ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
+																	elif r1239[1] == 'EN':
+																		ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
+																	ws.add(ws2)
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'🔴<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 1 🔴'
+																				f'\n\n'
+																				fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'🔴<b>New mark</b> on the subject<b>"{s[p]}"</b>: 1 🔴'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															else:
+																for i in range(0 - m1m_1 - m1m_2 - m1m_3 - m1m_4 + m1f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	am+=1
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 1</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+																				f'\n\n'
+																				fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Your 1 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+													ser = [s['Предмет'], f'{m5m_1} {m5m_2} {m5m_3} {m5m_4}', f'{m4m_1} {m4m_2} {m4m_3} {m4m_4}', f'{m3m_1} {m3m_2} {m3m_3} {m3m_4}', f'{m2m_1} {m2m_2} {m2m_3} {m2m_4}', f'{m1m_1} {m1m_2} {m1m_3} {m1m_4}', s['str']]
+													cursor.execute(f"INSERT INTO t{rowrt[0]} VALUES(?,?,?,?,?,?,?);", ser)
+													connect.commit()
+											else:
+												for s in spg:
+													m1m_1, m2m_1, m3m_1, m4m_1, m5m_1, n = 0, 0, 0, 0, 0, 1
+													m1m_2, m2m_2, m3m_2, m4m_2, m5m_2 = 0, 0, 0, 0, 0
+													m1m_3, m2m_3, m3m_3, m4m_3, m5m_3 = 0, 0, 0, 0, 0
+													c1, c2, c3 = map(int, s['Colvo'].split())
+													for mark in list(s['Оценки'].split()):
+														if int(mark) == 5:
+															if n <= c1:
+																m5m_1 +=1
+															elif n <= c1 + c2:
+																m5m_2 += 1
+															else:
+																m5m_3 += 1
+															n+=1
+														elif int(mark) == 4:
+															if n <= c1:
+																m4m_1 +=1
+															elif n <= c1 + c2:
+																m4m_2 += 1
+															else:
+																m4m_3 += 1
+															n+=1
+														elif int(mark) == 3:
+															if n <= c1:
+																m3m_1 +=1
+															elif n <= c1 + c2:
+																m3m_2 += 1
+															else:
+																m3m_3 += 1
+															n+=1
+														elif int(mark) == 2:
+															if n <= c1:
+																m2m_1 +=1
+															elif n <= c1 + c2:
+																m2m_2 += 1
+															else:
+																m2m_3 += 1
+															n+=1
+														elif int(mark) == 1:
+															if n <= c1:
+																m1m_1 +=1
+															elif n <= c1 + c2:
+																m1m_2 += 1
+															else:
+																m1m_3 += 1
+															n+=1
+													for row in records:
+														if row[0] == s['Предмет']:
+															m5f, m4f, m3f, m2f, m1f = sum(map(int,row[1].split())), sum(map(int,row[2].split())), sum(map(int,row[3].split())), sum(map(int,row[4].split())), sum(map(int,row[5].split())) #старые
+															ws = types.InlineKeyboardMarkup()
+															ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+															p = 'Предмет'
+															if len(s[p]) > 32:
+																prr = s[p][0:30] + '...'
+															else:
+																prr = s[p]
+															ws.add(types.InlineKeyboardButton(text = f'📊Статистика по предмету', callback_data = f'P{prr}'))
+															#ws2 = types.InlineKeyboardMarkup(text = 'Посмотреть статистику по предмету', callback_data='qwertyuiop')
+															ws.add(ws1)
+															if m5m_1 + m5m_2 + m5m_3 >= m5f:
+																for i in range(m5m_1 + m5m_2 + m5m_3 - m5f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	m_id = await create_new_id()
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	am+=1
+																	if r1239[1] == 'RU':
+																		ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
+																	elif r1239[1] == 'EN':
+																		ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
+																	ws.add(ws2)
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'🟢<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 5 🟢'
+																				f'\n\n'
+																				fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'🟢<b>New mark</b> on the subject<b>"{s[p]}"</b>: 5 🟢'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															else:
+																for i in range(0 - m5m_1 - m5m_2 - m5m_3 + m5f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	am+=1
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 5</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+																				f'\n\n'
+																				fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Your 5 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															if m4m_1 + m4m_2 + m4m_3 >= m4f:
+																for i in range(m4m_1 + m4m_2 + m4m_3 - m4f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	m_id = await create_new_id()
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	if r1239[1] == 'RU':
+																		ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
+																	elif r1239[1] == 'EN':
+																		ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
+																	ws.add(ws2)
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'🔵<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 4 🔵'
+																				f'\n\n'
+																				fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'🔵<b>New mark</b> on the subject<b>"{s[p]}"</b>: 4 🔵'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															else:
+																for i in range(0 - m4m_1 - m4m_2 - m4m_3 + m4f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	am+=1
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 4</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+																				f'\n\n'
+																				fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Your 4 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															if m3m_1 + m3m_2 + m3m_3 >= m3f:
+																for i in range(m3m_1 + m3m_2 + m3m_3 - m3f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	m_id = await create_new_id()
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	if r1239[1] == 'RU':
+																		ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
+																	elif r1239[1] == 'EN':
+																		ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
+																	ws.add(ws2)
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'🟠<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 3 🟠'
+																				f'\n\n'
+																				fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'🟠<b>New mark</b> on the subject<b>"{s[p]}"</b>: 3 🟠'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															else:
+																for i in range(0 - m3m_1 - m3m_2 - m3m_3 + m3f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	am+=1
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 3</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+																				f'\n\n'
+																				fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Your 3 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															if m2m_1 + m2m_2 + m2m_3 >= m2f:
+																for i in range(m2m_1 + m2m_2 + m2m_3 - m2f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	m_id = await create_new_id()
+																	if r1239[1] == 'RU':
+																		ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
+																	elif r1239[1] == 'EN':
+																		ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
+																	ws.add(ws2)
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'🔴<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 2 🔴'
+																				f'\n\n'
+																				fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'🔴<b>New mark</b> on the subject<b>"{s[p]}"</b>: 2 🔴'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															else:
+																for i in range(0 - m2m_1 - m2m_2 - m2m_3 + m2f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	am+=1
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 2</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+																				f'\n\n'
+																				fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Your 2 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															if m1m_1 + m1m_2 + m1m_3 >= m1f:
+																for i in range(m1m_1 + m1m_2 + m1m_3 - m1f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	m_id = await create_new_id()
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	if r1239[1] == 'RU':
+																		ws2 = types.InlineKeyboardButton(text = '👪Поделиться оценкой', switch_inline_query=str(m_id))
+																	elif r1239[1] == 'EN':
+																		ws2 = types.InlineKeyboardButton(text = '👪Share this mark', switch_inline_query=str(m_id))
+																	ws.add(ws2)
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'🔴<b>Новая оценка</b> по предмету <b>"{s[p]}"</b>: 1 🔴'
+																				f'\n\n'
+																				fr'Дата выставления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'🔴<b>New mark</b> on the subject<b>"{s[p]}"</b>: 1 🔴'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+															else:
+																for i in range(0 - m1m_1 - m1m_2 - m1m_3 + m1f):
+																	if r1239[1] == 'RU':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀Посмотреть', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Статистика', callback_data = f'P{prr}'), ws1)
+																	elif r1239[1] == 'EN':
+																		ws = types.InlineKeyboardMarkup()
+																		ws1 = types.InlineKeyboardButton(text = '👀See', url = 'https://elschool.ru/')
+																		ws.add(types.InlineKeyboardButton(text = f'📊Statistics', callback_data = f'P{prr}'), ws1)
+																	p, d = 'Предмет', str(datetime.datetime.now())
+																	am+=1
+																	try:
+																		if r1239[1] == 'RU':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Ваша оценка 1</b> по предмету <b>"{s[p]}"</b> была удалена❎.'
+																				f'\n\n'
+																				fr'Дата удаления: <b>{d[0:len(d)-7]} МСК.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																		elif r1239[1] == 'EN':
+																			await bot.send_message(rowrt[0], (fr'❎<b>Your 1 mark</b> on the subject<b>"{s[p]}"</b> has been deleted❎.'
+																				f'\n\n'
+																				fr'Date: <b>{d[0:len(d)-7]} MSK.</b>'), reply_markup=ws, parse_mode='HTML')
+																			await asyncio.sleep(1.0)
+																	except:
+																		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+																		await asyncio.sleep(1.0)
+													ser = [s['Предмет'], f'{m5m_1} {m5m_2} {m5m_3}', f'{m4m_1} {m4m_2} {m4m_3}', f'{m3m_1} {m3m_2} {m3m_3}', f'{m2m_1} {m2m_2} {m2m_3}', f'{m1m_1} {m1m_2} {m1m_3}', s['str']]
+													cursor.execute(f"INSERT INTO t{rowrt[0]} VALUES(?,?,?,?,?,?,?);", ser)
+													connect.commit()
+										await asyncio.sleep(2.0)
+				await bot.send_message(ADMIN_CHANNEL, f'Парсинг оценок {n_posting} выполнен, изменений — {am} шт.')
+				SP_TIME[f'{n_posting}'] = round(time.time() - start_time, 2)
+				await asyncio.sleep(5.0)
 			except:
-				await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
+				#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+				await asyncio.sleep(1.0)
 	else:
 		await bot.delete_message(message.from_user.id, message.message_id)
 
@@ -1118,13 +1108,16 @@ async def get(message):
 			sp = list(message.text.split('\n'))
 			if len(sp) == 2 and not '<' in sp[0] and not '>' in sp[0] and not '<' in sp[1] and not '>' in sp[1] and not '&' in sp[1] and not '&' in sp[0]:
 				qw = [message.from_user.id, sp[0], sp[1]]
+				n_posting = random.randint(1,10)
+
 				cursor.execute("DELETE FROM all_users WHERE user_id=?", (message.from_user.id,))
 				connect.commit()
-				cursor.execute("DELETE FROM users_posting WHERE user_id=?", (message.from_user.id,))
-				connect.commit()
+				for a in range(1, 11):
+					cursor.execute(f"DELETE FROM users_posting_{a} WHERE user_id=?", (message.from_user.id,))
+					connect.commit()
 				cursor.execute("INSERT INTO all_users VALUES(?,?,?);", qw)
 				connect.commit()
-				cursor.execute("INSERT INTO users_posting VALUES(?,?,?);", qw)
+				cursor.execute(f"INSERT INTO users_posting_{n_posting} VALUES(?,?,?);", qw)
 				connect.commit()
 				cursor.execute("DELETE FROM states WHERE user_id=?", (message.from_user.id,))
 				connect.commit()
@@ -1362,8 +1355,8 @@ async def stat(call):
 			pr2 = types.InlineKeyboardButton(text = '🔙Назад', callback_data = 'menu')
 			pr.add(pr1)
 			pr.add(pr2)
-			await bot.send_message(call.from_user.id, '🌐Привяжите аккаунт ELSCHOOL к аккаунту, чтобы получить доступ к разделу 📊Статистика\n\nЕсли вы недавно привязывали новый аккаунт, подождите 5-10 минут для обновления данных', reply_markup=pr)
-			await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}\n\nНе привязан акк')
+			await bot.send_message(call.from_user.id, '🌐Привяжите аккаунт ELSCHOOL к аккаунту, чтобы получить доступ к разделу 📊Статистика\n\nЕсли вы недавно привязывали новый аккаунт, ожидание обновления данных может занять около 30 минут', reply_markup=pr)
+			#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}\n\nНе привязан акк')
 		elif r1239[1] == 'EN':
 			pr = types.InlineKeyboardMarkup()
 			pr1 = types.InlineKeyboardButton(text = '➕Add ELSCHOOL account', callback_data='podkl')
@@ -1371,7 +1364,7 @@ async def stat(call):
 			pr.add(pr1)
 			pr.add(pr2)
 			await bot.send_message(call.from_user.id, '🌐Link your ELSCHOOL account to your account to access the 📊Statistics section\n\nIf you have recently linked a new account, wait 5-10 minutes to update the data', reply_markup=pr)
-			await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}\n\nНе привязан акк')
+			#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}\n\nНе привязан акк')
 
 #END OF TRANSLATE
 
@@ -1663,7 +1656,8 @@ async def chetv(call):
 						await bot.send_photo(call.from_user.id, photo = open(f'{call.from_user.id}.png', 'rb') , caption = f'*📊Cтатистика оценок {n1} {n2}* по предмету "*{row[0]}*" за *{number % 4} полугодие*.\n\n🔹Средний балл  — {sp_gr[-1]}\n\n*🔝Лучшая* оценка — *{best}*,\n*🔻Худшая* оценка — *{bad}*\n\n*Всего оценок — {len(sp_gr)-f}, из них:*\n🟢5 — {int(list(row[1].split())[2]) + int(list(row[1].split())[3])},\n🔵4 — {int(list(row[2].split())[2]) + int(list(row[2].split())[3])},\n🟠3 — {int(list(row[3].split())[2]) + int(list(row[3].split())[3])},\n🔴2 — {int(list(row[4].split())[2]) + int(list(row[4].split())[3])},\n🔴1 — {int(list(row[5].split())[2]) + int(list(row[5].split())[3])}', parse_mode='markdown', reply_markup=pil)
 				break
 	except:
-		await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
+		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+		await asyncio.sleep(1.0)
 
 @bot.callback_query_handler(lambda call: call.data == 'help')
 async def help(call):
@@ -1675,15 +1669,21 @@ async def help(call):
 			break
 
 	if r1239[1] == 'RU':
+		Faq_app= types.WebAppInfo("https://teletype.in/@the_sloth_bear/faq_elshelp")
+		faq_button = types.InlineKeyboardButton(text="❔FAQ", web_app=Faq_app)
 		qws = types.InlineKeyboardMarkup()
 		piln = types.InlineKeyboardButton(text = '🔙Назад', callback_data = 'menu')
+		qws.add(faq_button)
 		qws.add(piln)
-		await bot.send_message(call.from_user.id, '*Нашли баг❓ \nЕсть идея или предложение❓*\n\nВы всегда можете обратиться к *@the_sloth_bear*, либо к [специальному боту](https://t.me/elschool_help_support_bot)', parse_mode = 'markdown', reply_markup=qws)
+		await bot.send_message(call.from_user.id, '*Нашли баг❓ \nЕсть идея или предложение❓*\n\nВы всегда можете обратиться к *@the_sloth_bear*, либо к [специальному боту](https://t.me/elschool_help_support_bot)\n\nПеред тем, как задать вопрос, *убедитесь*, что на него *нет ответа* в FAQ👇', parse_mode = 'markdown', reply_markup=qws)
 	elif r1239[1] == 'EN':
+		Faq_app= types.WebAppInfo("https://teletype.in/@the_sloth_bear/faq_elshelp")
+		faq_button = types.InlineKeyboardButton(text="❔FAQ", web_app=Faq_app)
 		qws = types.InlineKeyboardMarkup()
 		piln = types.InlineKeyboardButton(text = '🔙Back', callback_data = 'menu')
+		qws.add(faq_button)
 		qws.add(piln)
-		await bot.send_message(call.from_user.id, '*Found a bug❓ \nHave an idea or suggestion❓*\n\nYou can always write to *@the_sloth_bear*, or to [special bot](https://t.me/elschool_help_support_bot)', parse_mode = 'markdown', reply_markup=qws)
+		await bot.send_message(call.from_user.id, '*Found a bug❓ \nHave an idea or suggestion❓*\n\nYou can always write to *@the_sloth_bear*, or to [special bot](https://t.me/elschool_help_support_bot)\n\nBefore asking a question, *make sure* that there is *no answer* to it in the FAQ👇', parse_mode = 'markdown', reply_markup=qws)
 
 @bot.inline_handler(func=lambda query: len(query.query) > 0)
 async def query_text(query):
@@ -2058,7 +2058,8 @@ async def chosen_in_handler_3(inline_query):
 						await bot.edit_message_text(inline_message_id=inline_query.inline_message_id, text = f'[ ]({url})*👤{n1} {n2} делится 📊статистикой оценок* по предмету *"{row[0]}"* за *{number % 4} полугодие*.\n\n🔹Средний балл  — {sp_gr[-1]}\n\n*🔝Лучшая* оценка — *{best}*,\n*🔻Худшая* оценка — *{bad}*\n\n*Всего оценок — {len(sp_gr)-f}, из них:*\n🟢5 — {int(list(row[1].split())[2]) + int(list(row[1].split())[3])},\n🔵4 — {int(list(row[2].split())[2]) + int(list(row[2].split())[3])},\n🟠3 — {int(list(row[3].split())[2]) + int(list(row[3].split())[3])},\n🔴2 — {int(list(row[4].split())[2]) + int(list(row[4].split())[3])},\n🔴1 — {int(list(row[5].split())[2]) + int(list(row[5].split())[3])}', parse_mode='markdown')
 				break
 	except:
-		await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
+		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+		await asyncio.sleep(1.0)
 
 @bot.callback_query_handler(lambda call: call.data == 'dop')
 async def dop(call):
@@ -2251,7 +2252,8 @@ async def spisok_word(call):
 		dfg = types.InlineKeyboardMarkup()
 		dfg.add(types.InlineKeyboardButton(text='🔙Назад', callback_data='profile'))
 		await bot.send_message(call.from_user.id, '📛Ошибка: похоже, в личном кабинете указаны неверные логин и пароль', reply_markup=dfg)
-		await bot.send_message(ADMIN_CHANNEL_ID, f'{traceback.format_exc()}')
+		#await bot.send_message(ADMIN_CHANNEL, f'{traceback.format_exc()}')
+		await asyncio.sleep(1.0)
 
 @bot.callback_query_handler(lambda call: call.data[0] == 'T')
 async def tsel(call):
