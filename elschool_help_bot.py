@@ -15,10 +15,13 @@ from elschool_client import ElschoolClient
 
 bot = AsyncTeleBot('')
 
-VERSION = "v.3.0.0-Beta"
+VERSION = "v.3.0.1-Beta"
 SP_DAYS = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+USERS_IN_CYCLE = 0
+AVG_PER_USER = 0.0
+IMAGES = {}
 
-connect = sqlite3.connect('els3_test.db', check_same_thread=False)
+connect = sqlite3.connect('github.db', check_same_thread=False)
 cursor = connect.cursor()
 
 cursor.execute("""CREATE TABLE IF NOT EXISTS all_users(
@@ -62,6 +65,12 @@ cursor.execute("""CREATE TABLE IF NOT EXISTS marks(
 """)
 connect.commit()
 
+cursor.execute("""CREATE TABLE IF NOT EXISTS users_posting(
+    user_id INTEGER
+    )
+""")
+connect.commit()
+
 
 @bot.message_handler(commands=['start'])
 async def start_func(message):
@@ -85,6 +94,7 @@ async def start_func(message):
     menu.add(types.InlineKeyboardButton(text='👤 Личный кабинет', callback_data='profile'))
     menu.add(types.InlineKeyboardButton(text='🎖 Оценки', callback_data='mm'))
     menu.add(types.InlineKeyboardButton(text='📚 ДЗ', callback_data='dz'))
+    menu.add(types.InlineKeyboardButton(text='🤖 Состояние автопарсинга', callback_data='status_parsing'))
     menu.add(types.InlineKeyboardButton(text='🛠 Техподдержка', callback_data='help'), types.InlineKeyboardButton(text='👨‍💻Исходный код', url='https://github.com/theslothbear/Elschool-Help-Bot'))
 
     await bot.send_photo(message.from_user.id, photo='https://imgur.com/nbDpsEi.jpg', caption=f'🏠*Главное меню Elschool Help Bot ({VERSION})*', parse_mode='markdown', reply_markup=menu)
@@ -96,10 +106,25 @@ async def menu_func(call):
     menu.add(types.InlineKeyboardButton(text='👤 Личный кабинет', callback_data='profile'))
     menu.add(types.InlineKeyboardButton(text='🎖 Оценки', callback_data='mm'))
     menu.add(types.InlineKeyboardButton(text='📚 ДЗ', callback_data='dz'))
+    menu.add(types.InlineKeyboardButton(text='🤖 Состояние автопарсинга', callback_data='status_parsing'))
     menu.add(types.InlineKeyboardButton(text='🛠 Техподдержка', callback_data='help'), types.InlineKeyboardButton(text='👨‍💻Исходный код', url='https://github.com/theslothbear/Elschool-Help-Bot'))
 
-    await bot.send_photo(call.from_user.id, photo='https://imgur.com/nbDpsEi.jpg', caption=f'🏠*Главное меню Elschool Help Bot ({VERSION})*', parse_mode='markdown', reply_markup=menu)
+    try:
+        await bot.edit_message_media(chat_id=call.from_user.id, message_id=call.message.message_id, media=types.InputMediaPhoto(media=IMAGES['logo'], caption=f'🏠*Главное меню Elschool Help Bot ({VERSION})*', parse_mode='markdown'), reply_markup=menu)
+    except Exception:
+        await bot.send_photo(call.from_user.id, photo='https://imgur.com/nbDpsEi.jpg', caption=f'🏠*Главное меню Elschool Help Bot ({VERSION})*', parse_mode='markdown', reply_markup=menu)
+        try:
+            await bot.delete_message(call.from_user.id, call.message.message_id)
+        except Exception:
+            pass
 
+
+@bot.message_handler(commands=['privacy'])
+async def privacy_func(message):
+    priv = types.InlineKeyboardMarkup()
+    priv.add(types.InlineKeyboardButton(text='📗Пользовательское соглашение', url='https://telegra.ph/Polzovatelskoe-soglashenie-Elschool-Help-Bot-09-04'))
+    priv.add(types.InlineKeyboardButton(text='🔙В меню', callback_data='menu'))
+    await bot.send_message(message.from_user.id, '*Пункт 2.2 Пользовательского соглашения:*\n\n_Начиная использовать Бот/его отдельные функции, Пользователь считается принявшим условия Соглашения в полном объеме без всяких оговорок и исключений._', reply_markup=priv, parse_mode='markdown')
 
 @bot.callback_query_handler(lambda call: call.data == 'profile')
 async def profile_func(call):
@@ -111,6 +136,7 @@ async def profile_func(call):
     else:
         pr.add(types.InlineKeyboardButton(text='✏ Изменить аккаунт ELSCHOOL', callback_data='podkl'))
         # pr.add(types.InlineKeyboardButton(text='💦Дополнительные функции', callback_data='dop'))
+        # pr.add(types.InlineKeyboardButton(text='🤖 Состояние автопарсинга', callback_data='status_parsing'))
         pr.add(types.InlineKeyboardButton(text='🗑 Удалить свои данные', callback_data='DATA_DELETE'))
         t1, t2 = credits[1], credits[2]
 
@@ -122,7 +148,60 @@ async def profile_func(call):
         n2 = ''
 
     pr.add(types.InlineKeyboardButton(text='🔙 Назад', callback_data='menu'))
-    await bot.send_photo(call.from_user.id, photo='https://imgur.com/ocHQUkF.jpg', caption=f'<b>👤Профиль {n1} {n2}</b>\n\n💠JWToken: <span class="tg-spoiler">{t1}</span>\n\n🔐RefreshToken: <span class="tg-spoiler">{t2}</span>', parse_mode='HTML', reply_markup=pr)
+
+    try:
+        await bot.edit_message_media(chat_id=call.from_user.id, message_id=call.message.message_id, media=types.InputMediaPhoto(media=IMAGES['user'], caption=f'<b>👤Профиль {n1} {n2}</b>\n\n💠JWToken: <span class="tg-spoiler">{t1}</span>\n\n🔐RefreshToken: <span class="tg-spoiler">{t2}</span>', parse_mode='markdown'), reply_markup=pr)
+    except Exception:
+        await bot.send_photo(call.from_user.id, photo='https://imgur.com/ocHQUkF.jpg', caption=f'<b>👤Профиль {n1} {n2}</b>\n\n💠JWToken: <span class="tg-spoiler">{t1}</span>\n\n🔐RefreshToken: <span class="tg-spoiler">{t2}</span>', parse_mode='HTML', reply_markup=pr)
+        try:
+            await bot.delete_message(call.from_user.id, call.message.message_id)
+        except Exception:
+            pass
+
+
+@bot.callback_query_handler(lambda call: call.data == 'status_parsing')
+async def status_parsing(call):
+    r = cursor.execute("SELECT * FROM users_posting WHERE user_id=?", (call.from_user.id,)).fetchone()
+    rm = types.InlineKeyboardMarkup()
+    if r is None:
+        rm.add(types.InlineKeyboardButton(text='✅ Включить автопроверку оценок', callback_data='enter_posting'))
+        s = 'На данный момент вы не находитесь в пуле автоматического парсинга'
+    else:
+        rm.add(types.InlineKeyboardButton(text='❎ Выключить автопроверку оценок', callback_data='off_posting'))
+        s = 'Вы находитесь в пуле автоматического парсинга'
+    rm.add(types.InlineKeyboardButton(text='🔙Назад', callback_data='menu'))
+
+    await bot.send_message(call.from_user.id, f'*🤖 Состояние автопарсинга*\n\n• Количество пользователей в пуле: {USERS_IN_CYCLE}\n• Среднее время на пользователя: {AVG_PER_USER} секунд\n\n_{s}_', reply_markup=rm, parse_mode='markdown')
+    try:
+        await bot.delete_message(call.from_user.id, call.message.message_id)
+    except Exception:
+        pass
+
+
+@bot.callback_query_handler(lambda call: call.data == 'enter_posting')
+async def enter_posting_func(call):
+    r = cursor.execute("SELECT * FROM users_posting WHERE user_id=?", (call.from_user.id,)).fetchone()
+    if r is None:
+        global USERS_IN_CYCLE
+        cursor.execute("INSERT INTO users_posting VALUES(?);", [call.from_user.id])
+        connect.commit()
+
+        USERS_IN_CYCLE += 1
+
+    await status_parsing(call)
+
+
+@bot.callback_query_handler(lambda call: call.data == 'off_posting')
+async def off_posting_func(call):
+    r = cursor.execute("SELECT * FROM users_posting WHERE user_id=?", (call.from_user.id,)).fetchone()
+    if r is not None:
+        global USERS_IN_CYCLE
+        cursor.execute("DELETE FROM users_posting WHERE user_id=?", (call.from_user.id,))
+        connect.commit()
+
+        USERS_IN_CYCLE -= 1
+
+    await status_parsing(call)
 
 
 @bot.callback_query_handler(lambda call: call.data == 'DATA_DELETE')
@@ -177,25 +256,30 @@ async def create_new_id():
 
 @bot.message_handler(commands=['get_marks'])
 async def get_marks_func(message):
-    credits = cursor.execute("SELECT * FROM credits WHERE user_id=?", (message.from_user.id,)).fetchone()
+    await process_marks(message.from_user.id, True)
+
+
+async def process_marks(user_id, by_user=False):
+    credits = cursor.execute("SELECT * FROM credits WHERE user_id=?", (user_id,)).fetchone()
     if credits is None:
-        await bot.send_message(message.from_user.id, '❎ Вы не авторизованы')
-        return
+        await bot.send_message(user_id, '❎ Вы не авторизованы')
+        return False  # удалить из очереди парсинга
 
-    last_time = cursor.execute("SELECT * FROM time WHERE user_id=?", (message.from_user.id,)).fetchone()
-    now_time = time.time()
-    if (last_time is not None) and (now_time - last_time[1] < 300):
-        await bot.reply_to(message, f'❎ Вы уже использовали эту функцию в последние 5 минут. Попробуйте через {int(5-(now_time - last_time[1])//60)} минут')
-        return
+    if by_user:
+        last_time = cursor.execute("SELECT * FROM time WHERE user_id=?", (user_id,)).fetchone()
+        now_time = time.time()
+        if (last_time is not None) and (now_time - last_time[1] < 300):
+            await bot.reply_to(user_id, f'❎ Вы уже использовали эту функцию в последние 5 минут. Попробуйте через {int(5-(now_time - last_time[1])//60)} минут')
+            return
 
-    if last_time is None:
-        last_time = [0, 0, 0]
+        if last_time is None:
+            last_time = [0, 0, 0]
 
-    await bot.send_chat_action(message.from_user.id, 'typing')
+        await bot.send_chat_action(user_id, 'typing')
 
     # Заранее извиняюсь за дальнейший код. Но переписывать не собираюсь. Себе дороже
     am = 0
-    rowrt = [message.from_user.id]
+    rowrt = [user_id]
 
     try:
         F, flag_norm = True, True
@@ -216,19 +300,19 @@ async def get_marks_func(message):
         async with ElschoolClient(credits[1], credits[2]) as client:
             status0, t0 = await client.auth()
             if not status0:
-                await bot.send_message(message.from_user.id, '❎ Не удалось войти в аккаунт Elschool. Возможно, стоит обновить cookies?')
-                return
+                await bot.send_message(user_id, '❎ Не удалось войти в аккаунт Elschool. Возможно, стоит обновить cookies?')
+                return False  # удалить из очереди парсинга
 
             status1, t1 = await client.get_url('https://elschool.ru/users/diaries')
             if not status1:
-                await bot.send_message(message.from_user.id, '❎ Не удалось загрузить страницу дневника. Возможно, стоит обновить cookies?')
-                return
+                await bot.send_message(user_id, '❎ Не удалось загрузить страницу дневника. Возможно, стоит обновить cookies?')
+                return False  # удалить из очереди парсинга
 
             s = t1.split('class="btn">Табель</a>')[0].split(r'href="')[-1].split(r'"')[0]
             status2, t2 = await client.get_url(f'https://elschool.ru/users/diaries/{s}')
             if status2 is None:
-                await bot.send_message(message.from_user.id, '❎ Не удалось загрузить страницу табеля. Возможно, стоит обновить cookies?')
-                return
+                await bot.send_message(user_id, '❎ Не удалось загрузить страницу табеля. Возможно, стоит обновить cookies?')
+                return False  # удалить из очереди парсинга
 
             r2 = t2
 
@@ -1009,19 +1093,20 @@ async def get_marks_func(message):
                         cursor.execute(f"INSERT INTO t{rowrt[0]} VALUES(?,?,?,?,?,?,?);", ser)
                         connect.commit()
             await asyncio.sleep(2.0)
-        if am == 0:
+        if am == 0 and by_user:
             rfv = types.InlineKeyboardMarkup()
             rfv.add(types.InlineKeyboardButton(text='❎', callback_data='delete'))
-            await bot.send_message(message.from_user.id, "🔕Новых оценок не обнаружено!", reply_markup=rfv)
+            await bot.send_message(user_id, "🔕Новых оценок не обнаружено!", reply_markup=rfv)
 
-        cursor.execute('DELETE FROM time WHERE user_id=?', (message.from_user.id,))
-        connect.commit()
-        cursor.execute("INSERT INTO time VALUES(?,?,?);", [message.from_user.id, int(time.time()), last_time[2]])
-        connect.commit()
+        if by_user:
+            cursor.execute('DELETE FROM time WHERE user_id=?', (user_id,))
+            connect.commit()
+            cursor.execute("INSERT INTO time VALUES(?,?,?);", [user_id, int(time.time()), last_time[2]])
+            connect.commit()
 
     except Exception:
         await bot.send_message(-1001984000978, f'bug: {rowrt[0]}\n\n{traceback.format_exc()}')
-        await bot.send_message(message.from_user.id, "❎ Произошла какая-то ошибка", reply_markup=rfv)
+        await bot.send_message(user_id, "❎ Произошла какая-то ошибка", reply_markup=rfv)
         await asyncio.sleep(1.0)
 
 
@@ -1648,13 +1733,13 @@ async def chetv(call):
 
 @bot.callback_query_handler(lambda call: call.data == 'help')
 async def help(call):
-    Faq_app= types.WebAppInfo("https://teletype.in/@the_sloth_bear/faq_elshelp")
+    Faq_app = types.WebAppInfo("https://teletype.in/@the_sloth_bear/faq_elshelp")
     faq_button = types.InlineKeyboardButton(text="❔FAQ", web_app=Faq_app)
     qws = types.InlineKeyboardMarkup()
     piln = types.InlineKeyboardButton(text = '🔙 Назад', callback_data = 'menu')
-    qws.add(faq_button)
+    # qws.add(faq_button)
     qws.add(piln)
-    await bot.send_message(call.from_user.id, '*Нашли баг❓ \nЕсть идея или предложение❓*\n\nВы всегда можете обратиться к *@the_sloth_bear*, либо к [специальному боту](https://t.me/elschool_help_support_bot)\n\nПеред тем, как задать вопрос, *убедитесь*, что на него *нет ответа* в FAQ👇', parse_mode = 'markdown', reply_markup=qws)
+    await bot.send_message(call.from_user.id, '*Нашли баг❓ \nЕсть идея или предложение❓*\n\nВы всегда можете обратиться к *@the_sloth_bear*, либо к [специальному боту](https://t.me/elschool_help_support_bot)', parse_mode = 'markdown', reply_markup=qws)
 
 
 @bot.inline_handler(func=lambda query: len(query.query) > 0)
@@ -2202,4 +2287,58 @@ async def text_message_func(message):
             await bot.reply_to(message, 'Некорректный ввод. Попробуйте ещё раз. По образцу.\n\n_aaaaa_\n_bbbbb_', parse_mode='markdown')
 
 
-asyncio.run(bot.polling(none_stop=True, interval=0))
+async def parsing_loop():
+    global USERS_IN_CYCLE, AVG_PER_USER
+    while True:
+        try:
+            # Получаем всех пользователей
+            users = cursor.execute("SELECT user_id FROM users_posting").fetchall()
+
+            USERS_IN_CYCLE = len(users)
+            # print(USERS_IN_CYCLE)
+            total = 0
+
+            for i, (user_id,) in enumerate(users):
+                # print(user_id)
+                user_start_time = time.time()
+                try:
+                    f = await process_marks(user_id)
+                    if f is False:
+                        cursor.execute("DELETE FROM users_posting WHERE user_id=?", (user_id,))
+                        connect.commit()
+
+                        await bot.send_message(user_id, '❎ Вы были исключены из цикла автоматической проверки оценок')
+
+                    user_time = round(time.time() - user_start_time, 2)
+                    total += user_time
+                    AVG_PER_USER = total / (i + 1)
+
+                    # Небольшая пауза между пользователями
+                    if i % 10 == 0:  # Каждого 10-го пользователя ждем чуть дольше
+                        await asyncio.sleep(5)
+                    else:
+                        await asyncio.sleep(2)
+
+                except Exception as e:
+                    print(f"❌ Ошибка у пользователя {user_id}: {e}")
+                    continue
+
+            await asyncio.sleep(60)
+
+        except Exception as e:
+            print(f"🔥 Критическая ошибка в цикле: {e}")
+            await asyncio.sleep(60)  # Пауза при ошибке
+
+
+async def main():
+    # Запускаем парсинг в фоне
+    asyncio.create_task(parsing_loop())
+
+    # Запускаем бота
+    await bot.polling(none_stop=True, interval=0)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# asyncio.run(bot.polling(none_stop=True, interval=0))
