@@ -21,7 +21,7 @@ USERS_IN_CYCLE = 0
 AVG_PER_USER = 0.0
 IMAGES = {}
 
-connect = sqlite3.connect('github.db', check_same_thread=False)
+connect = sqlite3.connect('els3_test.db', check_same_thread=False)
 cursor = connect.cursor()
 
 cursor.execute("""CREATE TABLE IF NOT EXISTS all_users(
@@ -150,7 +150,7 @@ async def profile_func(call):
     pr.add(types.InlineKeyboardButton(text='🔙 Назад', callback_data='menu'))
 
     try:
-        await bot.edit_message_media(chat_id=call.from_user.id, message_id=call.message.message_id, media=types.InputMediaPhoto(media=IMAGES['user'], caption=f'<b>👤Профиль {n1} {n2}</b>\n\n💠JWToken: <span class="tg-spoiler">{t1}</span>\n\n🔐RefreshToken: <span class="tg-spoiler">{t2}</span>', parse_mode='markdown'), reply_markup=pr)
+        await bot.edit_message_media(chat_id=call.from_user.id, message_id=call.message.message_id, media=types.InputMediaPhoto(media=IMAGES['user'], caption=f'<b>👤Профиль {n1} {n2}</b>\n\n💠JWToken: <span class="tg-spoiler">{t1}</span>\n\n🔐RefreshToken: <span class="tg-spoiler">{t2}</span>', parse_mode='HTML'), reply_markup=pr)
     except Exception:
         await bot.send_photo(call.from_user.id, photo='https://imgur.com/ocHQUkF.jpg', caption=f'<b>👤Профиль {n1} {n2}</b>\n\n💠JWToken: <span class="tg-spoiler">{t1}</span>\n\n🔐RefreshToken: <span class="tg-spoiler">{t2}</span>', parse_mode='HTML', reply_markup=pr)
         try:
@@ -1112,17 +1112,19 @@ async def process_marks(user_id, by_user=False):
 
 @bot.callback_query_handler(lambda call: call.data == 'mm')
 async def mm(call):
-    try:
-        await bot.delete_message(call.message.chat.id, call.message.message_id)
-    except Exception:
-        pass
-
     mm = types.InlineKeyboardMarkup()
     mm.add(types.InlineKeyboardButton(text='📊 Статистика', callback_data='stat1'))
     mm.add(types.InlineKeyboardButton(text='📝 Табель', callback_data='tabel'))
     mm.add(types.InlineKeyboardButton(text='🔎 Проверить новые оценки', callback_data='parse'))
     mm.add(types.InlineKeyboardButton(text='🔙 Назад', callback_data='menu'))
-    await bot.send_photo(call.from_user.id, 'https://imgur.com/Xgql7hf.jpg', '*🔀Выберите* необходимый пункт *меню оценок*:', parse_mode = 'markdown', reply_markup=mm)
+    try:
+        await bot.edit_message_media(chat_id=call.from_user.id, message_id=call.message.message_id, media=types.InputMediaPhoto(media=IMAGES['marks'], caption='*🔀 Выберите* необходимый пункт *меню оценок*:', parse_mode='markdown'), reply_markup=mm)
+    except Exception:
+        await bot.send_photo(call.from_user.id, 'https://imgur.com/Xgql7hf.jpg', '*🔀 Выберите* необходимый пункт *меню оценок*:', parse_mode='markdown', reply_markup=mm)
+        try:
+            await bot.delete_message(call.message.chat.id, call.message.message_id)
+        except Exception:
+            pass
 
 
 @bot.callback_query_handler(lambda call: call.data == 'parse')
@@ -1134,10 +1136,6 @@ async def not_parse_func(call):
 
 @bot.callback_query_handler(lambda call: call.data == 'tabel')
 async def tabel(call):
-    try:
-        await bot.delete_message(call.message.chat.id, call.message.message_id)
-    except:
-        pass
     kn = types.InlineKeyboardMarkup()
     kn.add(types.InlineKeyboardButton(text='📥 Скачать табель', callback_data='tabel_get'))
     kn.add(types.InlineKeyboardButton(text='🔙 Назад', callback_data='mm'))
